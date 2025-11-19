@@ -1,103 +1,75 @@
-# SGA QA Pack - Microsoft 365 Integration
+# SGA QA System
 
-**Status:** 100% Complete - Ready for Vercel Deployment
-**Last Updated:** November 19, 2025
+**Enterprise quality assurance application for Safety Grooving Australia**
 
-Enterprise quality assurance application for Safety Grooving Australia, integrated with Microsoft 365 ecosystem.
+A comprehensive Progressive Web App (PWA) for managing jobs, quality assurance reporting, incidents, and safety compliance - fully integrated with Microsoft 365.
 
-## Quick Start
+---
 
-**New to this project?** → Read **[INIT.md](./INIT.md)** for complete session summary
+## 🚀 Features
 
-**Ready to deploy?** → Read **[DEPLOYMENT_SUCCESS.md](./DEPLOYMENT_SUCCESS.md)** for deployment guide
+### Core Modules
+- **Dashboard** - Real-time statistics, AI-powered daily briefings, activity feed
+- **Job Management** - Complete CRUD for asphalt, profiling, and spray jobs
+- **QA Pack Reporting** - Multi-step forms with photo capture and offline support
+- **Incident Reporting** - Quick emergency reporting with GPS and photos
+- **NCR Tracking** - Non-conformance reports with role-based access
+- **Document Management** - PDF generation with SGA branding
+- **Resources & Templates** - Crew and equipment management
 
-**Need migration help?** → Read **[API_MIGRATION_EXAMPLES.md](./API_MIGRATION_EXAMPLES.md)** for code examples
+### Technical Highlights
+- ✅ Progressive Web App (installable on Windows & iPad)
+- ✅ Offline support with service worker
+- ✅ Touch-optimized for iPad field work (44px touch targets)
+- ✅ Real-time data from 45+ backend APIs
+- ✅ Role-based access control
+- ✅ Microsoft Entra ID authentication
+- ✅ Professional PDF generation with SGA logos
+- ✅ Photo capture with iPad camera integration
+- ✅ Auto-save drafts (online & offline)
 
-## Architecture
+---
 
-### Authentication
-- **Microsoft Entra ID (MSAL)** - Replacing Auth0
-- Files: `src/auth/msalConfig.ts`, `src/components/AuthProvider.tsx`
+## 🛠️ Tech Stack
 
-### Data Storage
-- **Microsoft Dataverse** - 12 tables with `cr3cd_` prefix
-- Client: `src/api/_lib/dataverse.ts`
+- **Frontend**: React 18 + TypeScript
+- **Build Tool**: Vite 5.4
+- **Styling**: Tailwind CSS 3.4
+- **Routing**: React Router 6
+- **Auth**: Microsoft MSAL (Azure AD)
+- **UI Components**: Radix UI + custom components
+- **Icons**: Lucide React
+- **Backend**: Vercel Serverless Functions
+- **Database**: Microsoft Dataverse
+- **Storage**: SharePoint + Azure Blob
+- **AI**: Google Gemini (daily briefings, core location generation)
 
-### File Storage
-- **SharePoint Document Libraries** - 5 libraries
-- Client: `src/api/_lib/sharepoint.ts`
+---
 
-## Environment
-
-**Power Platform:**
-- Environment: SGA QA Pack - Production
-- Dataverse: https://org24044a7d.crm6.dynamics.com
-
-**Tables (12):** foreman, itptemplate, job, qapack, dailyreport, incident, ncr, samplingplan, resource, sitephoto, asphaltplacement, straightedgereport
-
-**SharePoint Libraries (5):** QA Packs, Job Sheets, Site Photos, Incident Reports, NCR Documents
-
-## Local Development
+## 📦 Installation
 
 ```bash
-# Install dependencies
 npm install
-
-# Configure environment
-cp .env.example .env.local
-
-# Run dev server
 npm run dev
 ```
 
-## Deployment to Vercel
+---
 
-### Option 1: Via GitHub
-```bash
-git remote add origin https://github.com/YOUR-USERNAME/sga-qa-system.git
-git push -u origin main
-```
+## 🌐 Deployment
 
-### Option 2: Via Vercel CLI
+Deploy to Vercel:
 ```bash
 vercel --prod
 ```
 
-**Environment Variables:** Copy from `.env.vercel.template`
-
-See **[DEPLOYMENT_SUCCESS.md](./DEPLOYMENT_SUCCESS.md)** for detailed instructions.
-
-## Documentation
-
-### For Deployment
-- [DEPLOYMENT_SUCCESS.md](./DEPLOYMENT_SUCCESS.md) - Complete deployment guide
-- [VERCEL_MIGRATION_GUIDE.md](./VERCEL_MIGRATION_GUIDE.md) - Migration steps
-- [.env.vercel.template](./.env.vercel.template) - Environment variables
-
-### For Development
-- [API_MIGRATION_EXAMPLES.md](./API_MIGRATION_EXAMPLES.md) - Code migration examples
-- [docs/development/](./docs/development/) - Development guides
-
-### For Administration
-- [docs/deployment/](./docs/deployment/) - Deployment guides
-- [docs/security/](./docs/security/) - Security audits
-
-## Tech Stack
-
-- React 18 + TypeScript
-- Vite
-- Microsoft Dataverse
-- Microsoft Entra ID (MSAL)
-- SharePoint + Microsoft Graph API
-- Vercel
-
-## Contributors
-
-- **Claude Code** - Orchestration & architecture
-- **Gemini AI** - Code generation
-- **Dhruv Mann** - Deployment & testing
+See [DEPLOYMENT_READY.md](./DEPLOYMENT_READY.md) for full details.
 
 ---
 
-**Created with:** Claude Code + Gemini AI + Dhruv Mann
-**License:** Proprietary - Safety Grooving Australia
+## 📄 License
+
+Proprietary - Safety Grooving Australia. All rights reserved.
+
+---
+
+**Version**: 1.0.0 | **Status**: Production Ready ✅

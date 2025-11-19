@@ -87,7 +87,15 @@
       "Bash(git push:*)",
       "Bash(if [ -f .env.azure ])",
       "Bash(then grep \"CLIENT_SECRET\" .env.azure)",
-      "Bash(else echo \".env.azure file not found\")"
+      "Bash(else echo \".env.azure file not found\")",
+      "Bash(then grep -E \"GOOGLE_API_KEY|OPENROUTER|OPENCODE\" .env)",
+      "Bash(else echo \"No .env file found\")",
+      "Bash(dir C:Dhruvsga-qa-system)",
+      "Bash(dir)",
+      "Bash(dir:*)",
+      "Bash(nul)",
+      "Bash(npx tsc:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

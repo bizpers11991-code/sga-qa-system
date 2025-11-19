@@ -1,0 +1,235 @@
+import { Job } from '../types';
+
+const API_BASE = '/api';
+
+export interface JobFilters {
+  division?: 'Asphalt' | 'Profiling' | 'Spray' | '';
+  status?: 'Active' | 'Completed' | 'On Hold' | '';
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CreateJobRequest {
+  id: string;
+  jobNo: string;
+  client: string;
+  division: 'Asphalt' | 'Profiling' | 'Spray';
+  projectName: string;
+  location: string;
+  foremanId: string;
+  jobDate: string;
+  dueDate: string;
+  area?: number;
+  thickness?: number;
+  qaSpec?: string;
+}
+
+export interface UpdateJobRequest extends CreateJobRequest {}
+
+export interface DeleteJobRequest {
+  jobId: string;
+}
+
+class JobsApiService {
+  /**
+   * Fetches all jobs with optional client-side filtering
+   */
+  async getAllJobs(filters?: JobFilters): Promise<Job[]> {
+    try {
+      const response = await fetch(`${API_BASE}/get-all-jobs`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch jobs');
+      }
+
+      let jobs: Job[] = await response.json();
+
+      // Apply client-side filters
+      if (filters) {
+        jobs = this.applyFilters(jobs, filters);
+      }
+
+      return jobs;
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches jobs assigned to a specific foreman
+   */
+  async getForemanJobs(foremanId: string): Promise<Job[]> {
+    try {
+      const response = await fetch(`${API_BASE}/get-foreman-jobs?foremanId=${encodeURIComponent(foremanId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch foreman jobs');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching foreman jobs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new job
+   */
+  async createJob(data: CreateJobRequest): Promise<{ message: string; job: Job }> {
+    try {
+      const response = await fetch(`${API_BASE}/create-job`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create job');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating job:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates an existing job
+   */
+  async updateJob(data: UpdateJobRequest): Promise<{ message: string; job: Job }> {
+    try {
+      const response = await fetch(`${API_BASE}/update-job`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update job');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating job:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes a job
+   */
+  async deleteJob(jobId: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${API_BASE}/delete-job`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete job');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates multiple jobs at once
+   */
+  async createMultipleJobs(jobs: CreateJobRequest[]): Promise<{ message: string; jobs: Job[] }> {
+    try {
+      const response = await fetch(`${API_BASE}/create-multiple-jobs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobs }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create jobs');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating multiple jobs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apply client-side filters to jobs
+   */
+  private applyFilters(jobs: Job[], filters: JobFilters): Job[] {
+    return jobs.filter(job => {
+      // Division filter
+      if (filters.division && job.division !== filters.division) {
+        return false;
+      }
+
+      // Search filter (job number, client, or project name)
+      if (filters.search && filters.search.trim() !== '') {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSearch =
+          job.jobNo?.toLowerCase().includes(searchLower) ||
+          job.client?.toLowerCase().includes(searchLower) ||
+          job.projectName?.toLowerCase().includes(searchLower);
+
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
+      // Date range filters
+      if (filters.startDate) {
+        const jobDate = new Date(job.jobDate);
+        const startDate = new Date(filters.startDate);
+        if (jobDate < startDate) {
+          return false;
+        }
+      }
+
+      if (filters.endDate) {
+        const jobDate = new Date(job.jobDate);
+        const endDate = new Date(filters.endDate);
+        if (jobDate > endDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+}
+
+export const jobsApi = new JobsApiService();

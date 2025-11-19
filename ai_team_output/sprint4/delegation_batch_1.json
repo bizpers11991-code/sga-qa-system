@@ -1,0 +1,234 @@
+{
+  "batch_id": "sprint4_batch1",
+  "timestamp": "2025-11-19T07:30:00Z",
+  "status": "ready_to_execute",
+  "architect": "Claude Sonnet 4.5",
+
+  "foundation_complete": {
+    "pwa_manifest": true,
+    "service_worker": true,
+    "design_system": true,
+    "navigation_layout": true,
+    "routing": true
+  },
+
+  "parallel_delegations": [
+    {
+      "task_id": "WS3",
+      "title": "Dashboard with Real Data Integration",
+      "assigned_to": "Grok Beta",
+      "priority": "P1",
+      "estimated_hours": 3,
+      "
+": {
+        "deliverable_file": "ai_team_output/sprint4/deliverables/grok/WS3_dashboard.tsx",
+        "component_files": [
+          "src/components/dashboard/StatsCard.tsx",
+          "src/components/dashboard/QuickActions.tsx",
+          "src/components/dashboard/RecentActivity.tsx",
+          "src/components/dashboard/DailyBriefing.tsx"
+        ],
+        "api_services": [
+          "src/services/dashboardApi.ts"
+        ]
+      },
+      "requirements": {
+        "description": "Enhance the placeholder dashboard with real API integration and interactive widgets",
+        "features": [
+          "Connect to GET /api/get-foreman-jobs for job count",
+          "Connect to GET /api/get-reports for pending reports",
+          "Connect to GET /api/get-incidents for open incidents",
+          "Add recent activity feed (last 10 activities)",
+          "Add quick action cards (Create Job, Submit Report, Report Incident)",
+          "Daily briefing widget (fetch from /api/get-daily-briefing)",
+          "Loading states and error handling",
+          "Refresh button to reload data"
+        ],
+        "apis_to_use": [
+          "GET /api/get-foreman-jobs",
+          "GET /api/get-reports",
+          "GET /api/get-incidents",
+          "GET /api/get-daily-briefing"
+        ],
+        "design": "Use existing SGA colors (sga-700, sga-600), card-based layout, responsive grid"
+      },
+      "context_files": [
+        "src/pages/Dashboard.tsx (current placeholder)",
+        "src/components/layout/PageContainer.tsx",
+        "src/components/layout/PageHeader.tsx",
+        "src/types.ts (for type definitions)"
+      ]
+    },
+
+    {
+      "task_id": "WS4",
+      "title": "Job Management Module (CRUD)",
+      "assigned_to": "DeepSeek Coder V3",
+      "priority": "P1",
+      "estimated_hours": 4,
+      "deliverables": {
+        "deliverable_file": "ai_team_output/sprint4/deliverables/deepseek/WS4_job_management.tsx",
+        "component_files": [
+          "src/components/jobs/JobCard.tsx",
+          "src/components/jobs/JobFilters.tsx",
+          "src/components/jobs/JobForm.tsx",
+          "src/components/jobs/JobFormWizard.tsx"
+        ],
+        "page_files": [
+          "src/pages/jobs/JobCreate.tsx"
+        ],
+        "api_services": [
+          "src/services/jobsApi.ts"
+        ]
+      },
+      "requirements": {
+        "description": "Build complete job management with create, view, edit, delete functionality",
+        "features": [
+          "Job list with real data from GET /api/get-all-jobs",
+          "Filters: division, status, date range, search by job number/client",
+          "Job creation wizard: POST /api/create-job",
+          "Job detail view: Enhanced version of current JobDetail.tsx",
+          "Job editing: PUT /api/update-job",
+          "Job deletion: DELETE /api/delete-job (with confirmation)",
+          "Bulk job creation: POST /api/create-multiple-jobs",
+          "Export to Excel functionality",
+          "Loading, error, and empty states"
+        ],
+        "apis_to_use": [
+          "GET /api/get-all-jobs",
+          "GET /api/get-foreman-jobs",
+          "POST /api/create-job",
+          "POST /api/create-multiple-jobs",
+          "PUT /api/update-job",
+          "DELETE /api/delete-job"
+        ],
+        "design": "Table view with inline actions, responsive cards on mobile, multi-step form wizard for creation"
+      },
+      "context_files": [
+        "src/pages/jobs/JobList.tsx (current)",
+        "src/pages/jobs/JobDetail.tsx (current)",
+        "src/types.ts (Job types)",
+        "src/api/create-job.ts (reference for API structure)"
+      ]
+    },
+
+    {
+      "task_id": "WS5",
+      "title": "QA Pack Reporting System (Complex Forms)",
+      "assigned_to": "Gemini 2.0 Flash Exp",
+      "priority": "P1",
+      "estimated_hours": 5,
+      "deliverables": {
+        "deliverable_file": "ai_team_output/sprint4/deliverables/gemini/WS5_qa_reporting.tsx",
+        "component_files": [
+          "src/components/reports/JobSheetForm.tsx",
+          "src/components/reports/SamplingPlanForm.tsx",
+          "src/components/reports/PhotoCapture.tsx",
+          "src/components/reports/MaterialsTable.tsx",
+          "src/components/reports/EquipmentChecklist.tsx",
+          "src/components/reports/ReportPreview.tsx"
+        ],
+        "api_services": [
+          "src/services/reportsApi.ts"
+        ]
+      },
+      "requirements": {
+        "description": "Build comprehensive QA Pack reporting with daily job sheets, sampling plans, and photo upload",
+        "features": [
+          "Daily Job Sheet Form: Multi-step wizard with all fields from DailyJobSheetData type",
+          "Photo capture component: Camera + file upload (iPad optimized)",
+          "Materials table: Dynamic rows for job materials",
+          "Equipment checklist: Add/remove equipment items",
+          "Sampling Plan Form: Core location generation (GET /api/generate-core-locations)",
+          "Draft saving: POST /api/save-draft, GET /api/get-draft",
+          "Report submission: POST /api/submit-report",
+          "Report history: GET /api/get-reports, GET /api/get-report-history",
+          "PDF preview before submission",
+          "AI summary regeneration: POST /api/regenerate-ai-summary",
+          "Offline support: Save drafts to IndexedDB when offline"
+        ],
+        "apis_to_use": [
+          "POST /api/submit-report",
+          "POST /api/save-draft",
+          "GET /api/get-draft",
+          "GET /api/get-reports",
+          "GET /api/get-report-history",
+          "POST /api/regenerate-ai-summary",
+          "POST /api/generate-core-locations",
+          "PUT /api/update-report-status"
+        ],
+        "design": "Multi-step form with progress indicator, iPad-friendly touch inputs (44px), photo grid, preview modal"
+      },
+      "context_files": [
+        "src/types.ts (DailyJobSheetData, SamplingPlan types)",
+        "src/pages/reports/ReportList.tsx (current)",
+        "src/api/submit-report.ts (reference)"
+      ]
+    },
+
+    {
+      "task_id": "WS6",
+      "title": "Incident & NCR Management",
+      "assigned_to": "Grok Beta (Account 2)",
+      "priority": "P2",
+      "estimated_hours": 3,
+      "deliverables": {
+        "deliverable_file": "ai_team_output/sprint4/deliverables/grok/WS6_incident_ncr.tsx",
+        "component_files": [
+          "src/components/incidents/IncidentForm.tsx",
+          "src/components/incidents/IncidentCard.tsx",
+          "src/components/ncr/NcrForm.tsx",
+          "src/components/ncr/NcrCard.tsx"
+        ],
+        "api_services": [
+          "src/services/incidentsApi.ts",
+          "src/services/ncrApi.ts"
+        ]
+      },
+      "requirements": {
+        "description": "Build incident reporting and NCR tracking systems",
+        "features": [
+          "Quick incident report form: POST /api/submit-incident",
+          "Photo upload for incidents (multiple)",
+          "AI-generated incident ID display",
+          "Incident list with filters: GET /api/get-incidents",
+          "NCR creation form (engineers/admins only): POST /api/save-ncr",
+          "NCR list: GET /api/get-ncrs",
+          "Status updates and tracking",
+          "Comments/updates on incidents and NCRs",
+          "Emergency flag for critical incidents"
+        ],
+        "apis_to_use": [
+          "POST /api/submit-incident",
+          "POST /api/save-incident",
+          "GET /api/get-incidents",
+          "POST /api/save-ncr",
+          "GET /api/get-ncrs"
+        ],
+        "design": "Emergency-focused quick form for incidents, detailed form for NCRs, status timeline view"
+      },
+      "context_files": [
+        "src/pages/incidents/IncidentList.tsx (current)",
+        "src/pages/ncr/NcrList.tsx (current)",
+        "src/types.ts (incident types)"
+      ]
+    }
+  ],
+
+  "instructions_for_ai_team": {
+    "code_style": "Follow existing TypeScript + React patterns in src/components/Login.tsx and src/App.tsx",
+    "styling": "Use Tailwind CSS with SGA colors (sga-700, sga-600), match existing design system",
+    "api_calls": "Use fetch() with proper error handling, loading states, and TypeScript typing",
+    "file_structure": "Place components in appropriate directories, create API service files",
+    "testing": "Include basic error handling and loading states",
+    "accessibility": "ARIA labels, 44px touch targets, keyboard navigation",
+    "output_format": "Provide complete working code for each file with full paths"
+  },
+
+  "supervision_checklist": {
+    "code_review": "Claude reviews all deliverables for quality",
+    "integration": "Claude integrates code into main codebase",
+    "testing": "Claude runs build and tests",
+    "deployment": "Claude deploys to GitHub and Vercel"
+  }
+}
