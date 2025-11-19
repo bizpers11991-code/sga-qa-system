@@ -24,6 +24,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "src/api/**",
     "src/m365-deployment/**",
     "m365-deployment/**",
     "tests/**",
