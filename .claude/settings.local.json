@@ -100,7 +100,8 @@
       "Bash(magick:*)",
       "Bash(convert:*)",
       "Bash(node resize-icons.js:*)",
-      "Bash(node resize-icons.cjs:*)"
+      "Bash(node resize-icons.cjs:*)",
+      "Bash(Printed copies are uncontrolled documents\"\n- Orange section headers, bordered tables, proper typography\n- Division-specific sections with correct styling\n- Photo grid with captions, automatic pagination\n- Enhanced Puppeteer settings (60s timeout, A4 format)\n\n## Technical Improvements\n- All TypeScript compilation errors resolved\n- Build successful with no breaking changes\n- Extended type system with comprehensive interfaces\n- Proper error handling and loading states\n- Responsive design for iPad and desktop\n- Offline support with localStorage drafts\n- Image optimization for photo uploads\n- Clean component architecture with separation of concerns\n\n## New Files Created (23 new files)\n- 3 logo/icon assets in public/\n- 11 new report form components\n- 4 scheduler components\n- 3 dashboard components\n- 2 new API service modules\n\n## Modified Files (15 updates)\n- Enhanced existing components with new features\n- Extended type definitions for all new data structures\n- Updated routing and navigation for new pages\n- Enhanced PDF generation and API endpoints\n\n## Success Criteria Met\n✅ All features from original PDF are now implemented\n✅ SGA logo integrated across all touchpoints\n✅ Engineer and Foreman dashboards with role-based routing\n✅ Comprehensive job creation with all 60+ fields\n✅ Scheduler with calendar view and division filters\n✅ Complete QA Pack system with 7 tabs and auto-save\n✅ PDF output matches exact reference layout\n✅ TypeScript compilation with zero errors\n✅ Responsive design for iPad field work\n✅ Build successful (13.32s, 684KB bundle)\n\nGenerated with Claude Code (Sonnet 4.5)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
