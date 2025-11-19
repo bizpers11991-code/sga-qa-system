@@ -11,6 +11,7 @@ interface SidebarProps {
 const iconMap: Record<string, string> = {
   home: '🏠',
   briefcase: '💼',
+  calendar: '📅',
   document: '📄',
   alert: '⚠️',
   clipboard: '📋',

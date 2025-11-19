@@ -18,6 +18,13 @@ const Login: React.FC = () => {
         <div className="flex min-h-screen items-center justify-center bg-gray-50">
             <div className="w-full max-w-md space-y-8">
                 <div className="text-center">
+                    <div className="flex justify-center mb-6">
+                        <img
+                            src="/assets/sga-logo.png"
+                            alt="Safety Grooving Australia"
+                            className="h-20 w-auto object-contain"
+                        />
+                    </div>
                     <h2 className="text-3xl font-bold tracking-tight text-gray-900">
                         SGA QA Pack
                     </h2>

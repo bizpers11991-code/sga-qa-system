@@ -1,4 +1,4 @@
-import { Job } from '../types';
+import { Job, ProfilingJobDetails, AsphaltJobDetails } from '../types';
 
 const API_BASE = '/api';
 
@@ -23,6 +23,9 @@ export interface CreateJobRequest {
   area?: number;
   thickness?: number;
   qaSpec?: string;
+  itpTemplateId?: string;
+  profilingDetails?: ProfilingJobDetails;
+  asphaltDetails?: AsphaltJobDetails;
 }
 
 export interface UpdateJobRequest extends CreateJobRequest {}

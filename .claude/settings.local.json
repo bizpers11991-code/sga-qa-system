@@ -95,7 +95,12 @@
       "Bash(dir:*)",
       "Bash(nul)",
       "Bash(npx tsc:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(echo:*)",
+      "Bash(magick:*)",
+      "Bash(convert:*)",
+      "Bash(node resize-icons.js:*)",
+      "Bash(node resize-icons.cjs:*)"
     ],
     "deny": [],
     "ask": []

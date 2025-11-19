@@ -5,10 +5,12 @@ import ProtectedRoute from './ProtectedRoute';
 import RoleGuard from './RoleGuard';
 
 // Lazy load page components
-const Dashboard = lazy(() => import('../pages/Dashboard'));
+const DashboardRouter = lazy(() => import('../pages/DashboardRouter'));
 const JobDetail = lazy(() => import('../pages/jobs/JobDetail'));
 const JobList = lazy(() => import('../pages/jobs/JobList'));
+const SchedulerPage = lazy(() => import('../pages/scheduler/SchedulerPage'));
 const ReportList = lazy(() => import('../pages/reports/ReportList'));
+const QaPackPage = lazy(() => import('../pages/reports/QaPackPage'));
 const IncidentList = lazy(() => import('../pages/incidents/IncidentList'));
 const NcrList = lazy(() => import('../pages/ncr/NcrList'));
 const TemplateList = lazy(() => import('../pages/templates/TemplateList'));
@@ -34,14 +36,18 @@ export const RoutesComponent = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><DashboardRouter /></Suspense></ProtectedRoute>} />
 
       {/* Jobs Routes */}
       <Route path="/jobs" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobList /></Suspense></ProtectedRoute>} />
       <Route path="/jobs/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobDetail /></Suspense></ProtectedRoute>} />
 
+      {/* Scheduler Routes */}
+      <Route path="/scheduler" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><SchedulerPage /></Suspense></ProtectedRoute>} />
+
       {/* Reports Routes */}
       <Route path="/reports" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ReportList /></Suspense></ProtectedRoute>} />
+      <Route path="/qa-pack/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QaPackPage /></Suspense></ProtectedRoute>} />
 
       {/* Incidents Routes */}
       <Route path="/incidents" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><IncidentList /></Suspense></ProtectedRoute>} />

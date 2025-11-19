@@ -61,16 +61,18 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
           </svg>
         </button>
 
-        {/* Logo - visible on desktop */}
-        <div className="hidden lg:flex items-center gap-3">
-          <div className="w-10 h-10 bg-sga-700 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">SGA</span>
-          </div>
-          <div>
+        {/* Logo with link to dashboard */}
+        <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <img
+            src="/assets/sga-logo.png"
+            alt="Safety Grooving Australia"
+            className="h-10 w-auto object-contain"
+          />
+          <div className="hidden lg:block">
             <h2 className="text-lg font-bold text-gray-900">Quality Assurance</h2>
             <p className="text-xs text-gray-500">Safety Grooving Australia</p>
           </div>
-        </div>
+        </a>
       </div>
 
       {/* Right section */}

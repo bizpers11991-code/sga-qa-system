@@ -25,6 +25,13 @@ export const navigationItems: NavItem[] = [
     roles: 'all',
   },
   {
+    id: 'scheduler',
+    label: 'Scheduler',
+    path: '/scheduler',
+    icon: 'calendar',
+    roles: 'all',
+  },
+  {
     id: 'reports',
     label: 'Reports',
     path: '/reports',

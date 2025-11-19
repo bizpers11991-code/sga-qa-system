@@ -4,8 +4,8 @@
   "description": "Enterprise quality assurance application for Safety Grooving Australia",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffbeb",
-  "theme_color": "#d97706",
+  "background_color": "#ffffff",
+  "theme_color": "#F5A524",
   "orientation": "portrait-primary",
   "icons": [
     {

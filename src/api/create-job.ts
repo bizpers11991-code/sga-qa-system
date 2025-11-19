@@ -27,7 +27,7 @@ async function handler(
   response: VercelResponse
 ) {
   let jobData: Job = request.body;
-  
+
   try {
     const redis = getRedisInstance();
 
@@ -37,9 +37,16 @@ async function handler(
     if (jobData.division !== 'Profiling' && !jobData.jobNo) {
         return response.status(400).json({ message: 'Job Number is required for non-Profiling jobs.' });
     }
-    
+
     // Stamp the job with the current schema version for forward compatibility.
     jobData.schemaVersion = LATEST_SCHEMA_VERSION;
+
+    // Ensure division-specific details are properly structured
+    if (jobData.division === 'Profiling' && jobData.profilingDetails) {
+      // Profiling details are already structured correctly
+    } else if (jobData.division === 'Asphalt' && jobData.asphaltDetails) {
+      // Asphalt details are already structured correctly
+    }
     
     const jobKey = `job:${jobData.id}`;
     const jobSheetDataForStorage = jobData.jobSheetData; // Keep a copy with data

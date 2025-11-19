@@ -147,6 +147,86 @@ export interface DailyJobSheetData {
     schemaVersion?: number;
 }
 
+export interface JobContacts {
+    projectManager?: string;
+    projectSupervisor?: string;
+    asphaltSupervisor?: string;
+    asphaltForeman?: string;
+    clientEngineer?: { name: string; phone: string };
+    clientSupervisor?: { name: string; phone: string };
+}
+
+export interface JobSiteDetails {
+    plantLaydownLocation?: string;
+    inspectedBy?: string;
+    compactionCheck?: string;
+    surfaceCondition?: string;
+    trafficControl?: string;
+    sweeping?: string;
+    inductions?: string;
+}
+
+export interface JobCartage {
+    semiTrucks?: number;
+    eightWheelTrucks?: number;
+    tanddTrucks?: number;
+    sixWheelTrucks?: number;
+    lilTipper?: number;
+}
+
+export interface JobEquipment {
+    machine: string;
+    startTime: string;
+    supplier: string;
+    notes: string;
+}
+
+export interface JobTruck {
+    truckId: string;
+}
+
+export interface JobMaterialRow {
+    mixCode: string;
+    pavementType: string;
+    tonnes: number;
+    area: number;
+    depth: number;
+    density: number;
+    lotNumber: string;
+}
+
+export interface ProfilingJobDetails {
+    dateRequired?: string;
+    crewLeader?: string;
+    crew?: string[];
+    depotStartTime?: string;
+    leaveDepotTime?: string;
+    onSiteBriefingTime?: string;
+    startCutTime?: string;
+    clientSiteContact?: string;
+    mapLink?: string;
+    workArea?: number;
+    workDepth?: number;
+    tons?: number;
+    trucksCount?: number;
+    descriptionOfWorks?: string;
+    rapDumpsite?: string;
+    equipment?: JobEquipment[];
+    trucks?: JobTruck[];
+}
+
+export interface AsphaltJobDetails {
+    asphaltPlant?: string;
+    startTimeYard?: string;
+    estimatedFinishTime?: string;
+    mapLink?: string;
+    dayShift?: boolean;
+    contacts?: JobContacts;
+    siteDetails?: JobSiteDetails;
+    cartage?: JobCartage;
+    materials?: JobMaterialRow[];
+}
+
 export interface Job {
     id: string; // 'job-' + Date.now()
     jobNo: string;
@@ -163,6 +243,8 @@ export interface Job {
     qaSpec?: string;
     requiredQaForms?: (keyof Omit<QaPack, 'lastUpdated'>)[];
     itpTemplateId?: string;
+    profilingDetails?: ProfilingJobDetails;
+    asphaltDetails?: AsphaltJobDetails;
     schemaVersion?: number;
 }
 
