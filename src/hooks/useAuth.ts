@@ -30,8 +30,8 @@ const useAuth = () => {
         } catch (error) {
             console.error("Token acquisition error:", error);
             // Fall back to interactive method
-            const response = await instance.acquireTokenRedirect(loginRequest);
-            return response?.accessToken;
+            await instance.acquireTokenRedirect(loginRequest);
+            return null;
         }
     };
 

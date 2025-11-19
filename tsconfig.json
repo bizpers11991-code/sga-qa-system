@@ -18,11 +18,17 @@
     "types": ["vite/client"]
   },
   "include": [
-    "./**/*.ts",
-    "./**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/m365-deployment/**",
+    "m365-deployment/**",
+    "tests/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "scripts/**"
   ]
 }

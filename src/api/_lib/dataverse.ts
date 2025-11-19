@@ -50,7 +50,7 @@ async function getAccessToken(): Promise<string> {
   // Token expires in 1 hour, refresh 5 minutes before expiry
   tokenExpiry = Date.now() + ((data.expires_in - 300) * 1000);
 
-  return accessToken;
+  return accessToken!;
 }
 
 /**

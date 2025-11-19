@@ -32,8 +32,7 @@ const msalConfig: Configuration = {
                 }
             },
             piiLoggingEnabled: false
-        },
-        allowNativeBroker: false,
+        }
     }
 };
 

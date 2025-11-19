@@ -81,7 +81,13 @@
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" auth login)",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" repo create sga-qa-system --public --source=. --description=\"Enterprise quality assurance application for Safety Grooving Australia, integrated with Microsoft 365 ecosystem\" --push)",
       "Bash(git filter-branch --tree-filter \"find . -type f \\( -name ''*.md'' -o -name ''.env*'' \\) -exec sed -i ''s/KFE8Q~Nvcb2EXEBI01CI85PuY8F8s4bfhqdSvddg/your-client-secret-here/g'' {} \\; 2>/dev/null || true\" -- --all)",
-      "Bash(/tmp/secrets.txt)"
+      "Bash(/tmp/secrets.txt)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(if [ -f .env.azure ])",
+      "Bash(then grep \"CLIENT_SECRET\" .env.azure)",
+      "Bash(else echo \".env.azure file not found\")"
     ],
     "deny": [],
     "ask": []
