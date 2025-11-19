@@ -1,0 +1,55 @@
+{
+  "name": "ApprovalFlow",
+  "description": "Approval chain for QA Pack submissions",
+  "triggers": [
+    {
+      "type": "Power Apps",
+      "parameters": {
+        "input": {
+          "QAPackID": "string"
+        }
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "Validate User Permissions",
+      "type": "Condition",
+      "parameters": {
+        "condition": "@contains(['engineer@sga.com', 'admin@sga.com'], triggerBody()['UserEmail'])",
+        "actionsIfTrue": [
+          {
+            "name": "Start Approval",
+            "type": "Start and wait for an approval",
+            "parameters": {
+              "approvalType": "Approve/Reject - First to respond",
+              "title": "QA Pack Approval",
+              "assignedTo": "engineer@sga.com",
+              "details": "Review QA Pack @triggerBody()['QAPackID']"
+            }
+          }
+        ],
+        "actionsIfFalse": [
+          {
+            "name": "Deny Access",
+            "type": "Terminate",
+            "parameters": {
+              "runStatus": "Failed",
+              "errorMessage": "Unauthorized user"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Update Status",
+      "type": "Update item",
+      "parameters": {
+        "site": "SGA Quality Assurance",
+        "list": "QA Packs",
+        "id": "@triggerBody()['QAPackID']",
+        "Status": "@outputs('Start_Approval')?['body/response']"
+      }
+    }
+  ]
+}

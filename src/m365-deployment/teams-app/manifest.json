@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.11/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.11",
+  "version": "1.0.0",
+  "id": "YOUR_APP_ID",
+  "packageName": "com.sga.qapack",
+  "developer": {
+    "name": "SGA",
+    "websiteUrl": "https://www.sgagroup.com.au",
+    "privacyUrl": "https://www.sgagroup.com.au/privacy",
+    "termsOfUseUrl": "https://www.sgagroup.com.au/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "SGA QA Pack",
+    "full": "SGA Quality Assurance Pack"
+  },
+  "description": {
+    "short": "SGA QA Pack for foremen",
+    "full": "This app allows foremen to submit their daily QA packs."
+  },
+  "accentColor": "#FFFFFF",
+  "staticTabs": [
+    {
+      "entityId": "dashboard",
+      "name": "Dashboard",
+      "contentUrl": "https://make.powerapps.com/apps/YOUR_APP_ID/play",
+      "websiteUrl": "https://make.powerapps.com/apps/YOUR_APP_ID/play",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "*.powerapps.com"
+  ]
+}

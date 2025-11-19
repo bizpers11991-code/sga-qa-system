@@ -1,0 +1,232 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+              }
+            },
+            "method": "get",
+            "path": "/datasets/@{encodeURIComponent(encodeURIComponent('YOUR_SHAREPOINT_SITE_URL'))}/tables/@{encodeURIComponent('YOUR_JOBS_LIST_ID')}/onnewitems"
+          },
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 1
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "actions": {
+            "Populate_a_Microsoft_Word_template": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_wordonlinebusiness']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "source": "SharePoint",
+              "driveId": "YOUR_SHAREPOINT_DOCUMENT_LIBRARY_ID",
+              "fileId": "YOUR_JOB_SHEET_WORD_TEMPLATE_FILE_ID",
+              "templateBody": {
+                "jobNo": "@triggerBody()?['JobNumber']",
+                "client": "@triggerBody()?['Client']"
+              }
+            },
+            "path": "/PopulateDocument"
+          }
+        },
+        "Create_file_(Word)": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_onedriveforbusiness']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "name": "@{replace(replace(replace(triggerBody()?['JobNumber'], '/', '_'), '\\', '_'), ':', '_')}_Job_Sheet.docx",
+              "content": "@body('Populate_a_Microsoft_Word_template')"
+            },
+            "path": "/datasets/default/files"
+          },
+          "runAfter": {
+            "Populate_a_Microsoft_Word_template": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Convert_file_(PDF)": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_onedriveforbusiness']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "fileId": "@body('Create_file_(Word)')?['id']",
+              "targetFileType": "pdf"
+            },
+            "path": "/files/@{encodeURIComponent(body('Create_file_(Word)')?['id'])}/content"
+          },
+          "runAfter": {
+            "Create_file_(Word)": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Create_file_(SharePoint)": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "name": "@{replace(replace(replace(triggerBody()?['JobNumber'], '/', '_'), '\\', '_'), ':', '_')}_Job_Sheet.pdf",
+              "content": "@body('Convert_file_(PDF)')"
+            },
+            "path": "/datasets/@{encodeURIComponent(encodeURIComponent('YOUR_SHAREPOINT_SITE_URL'))}/files",
+            "queries": {
+              "folderPath": "/Job Sheets"
+            }
+          },
+          "runAfter": {
+            "Convert_file_(PDF)": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Post_message_in_a_chat_or_channel": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_teams']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "messageBody": "A new job has been created and the Job Sheet is ready. Please check the QA Pack system for assignment details.",
+              "channelId": "YOUR_TEAMS_CHANNEL_ID"
+            },
+            "path": "/teams/@{encodeURIComponent('YOUR_TEAMS_ID')}/channels/@{encodeURIComponent('YOUR_TEAMS_CHANNEL_ID')}/chat/messages"
+          },
+          "runAfter": {
+            "Create_file_(SharePoint)": [
+              "Succeeded"
+            ]
+          }
+        }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "actions": {
+            "Log_Error": {
+              "type": "Compose",
+              "inputs": {
+                "timestamp": "@{utcNow()}",
+                "flowName": "@{workflow().name}",
+                "runId": "@{workflow().run.name}",
+                "error": "@{result('Try_Scope')}",
+                "jobId": "@{triggerBody()?['ID']}"
+              }
+            },
+            "Send_Error_To_Teams": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['shared_teams']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "body": {
+                  "messageBody": "❌ Job Creation Flow Error: @{outputs('Log_Error')}",
+                  "channelId": "ERROR_CHANNEL_ID"
+                },
+                "path": "/teams/TEAM_ID/channels/ERROR_CHANNEL_ID/chat/messages"
+              },
+              "runAfter": {
+                "Log_Error": ["Succeeded"]
+              }
+            },
+            "Terminate": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "FlowExecutionFailed",
+                  "message": "@{outputs('Log_Error')}"
+                }
+              },
+              "runAfter": {
+                "Send_Error_To_Teams": ["Succeeded", "Failed", "Skipped"]
+              }
+            }
+          },
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut", "Skipped"]
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "sharepointonline": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/connections/shared-sharepointonl-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+        }
+      },
+      "shared_wordonlinebusiness": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_wordonlinebusiness/connections/shared-wordonlinebu-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_wordonlinebusiness"
+        }
+      },
+      "shared_onedriveforbusiness": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness/connections/shared-onedrivefor-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_onedriveforbusiness"
+        }
+      },
+      "shared_teams": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_teams/connections/shared-teams-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_teams"
+        }
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}

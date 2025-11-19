@@ -1,0 +1,143 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "16"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "actions": {
+            "Get_items": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('YOUR_SHAREPOINT_SITE_URL'))}/tables/@{encodeURIComponent('YOUR_QA_PACKS_LIST_ID')}/items",
+                "$filter": "Created ge '@{startOfDay(utcNow())}' and Created le '@{endOfDay(utcNow())}'",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT5S",
+                  "maximumInterval": "PT30S"
+                }
+              }
+            },
+            "Post_message_in_a_chat_or_channel": {
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_teams']['connectionId']"
+              }
+            },
+            "method": "post",
+            "body": {
+              "messageBody": "Daily Summary: @{body('Get_items')?['value']?.length} QA Pack(s) submitted today. Please check the QA Pack system for details.",
+              "channelId": "YOUR_TEAMS_CHANNEL_ID"
+            },
+            "path": "/teams/@{encodeURIComponent('YOUR_TEAMS_ID')}/channels/@{encodeURIComponent('YOUR_TEAMS_CHANNEL_ID')}/chat/messages"
+          },
+          "runAfter": {
+            "Get_items": [
+              "Succeeded"
+            ]
+          }
+        }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "actions": {
+            "Log_Error": {
+              "type": "Compose",
+              "inputs": {
+                "timestamp": "@{utcNow()}",
+                "flowName": "@{workflow().name}",
+                "runId": "@{workflow().run.name}",
+                "error": "@{result('Try_Scope')}"
+              }
+            },
+            "Send_Error_To_Teams": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['shared_teams']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "body": {
+                  "messageBody": "❌ Daily Summary Flow Error: @{outputs('Log_Error')}",
+                  "channelId": "ERROR_CHANNEL_ID"
+                },
+                "path": "/teams/TEAM_ID/channels/ERROR_CHANNEL_ID/chat/messages"
+              },
+              "runAfter": {
+                "Log_Error": ["Succeeded"]
+              }
+            },
+            "Terminate": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "FlowExecutionFailed",
+                  "message": "@{outputs('Log_Error')}"
+                }
+              },
+              "runAfter": {
+                "Send_Error_To_Teams": ["Succeeded", "Failed", "Skipped"]
+              }
+            }
+          },
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut", "Skipped"]
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "sharepointonline": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/connections/shared-sharepointonl-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+        }
+      },
+      "shared_teams": {
+        "connection": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_teams/connections/shared-teams-d3a1b8b8-c8c8-4b8f-8c8e-8c8c8c8c8c8c"
+        },
+        "api": {
+          "id": "/providers/Microsoft.PowerApps/apis/shared_teams"
+        }
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}

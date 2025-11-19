@@ -1,0 +1,31 @@
+{
+  "name": "PredictiveMaintenanceFlow",
+  "description": "Copilot-driven predictive maintenance alerts",
+  "triggers": [
+    {
+      "type": "Recurrence",
+      "parameters": {
+        "frequency": "Daily",
+        "interval": 1
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "Analyze Equipment",
+      "type": "Create text with GPT",
+      "parameters": {
+        "prompt": "Analyze equipment usage from Dataverse and predict maintenance needs."
+      }
+    },
+    {
+      "name": "Create Alert",
+      "type": "Create item",
+      "parameters": {
+        "site": "SGA Quality Assurance",
+        "list": "PredictiveAlerts",
+        "Alert": "@outputs('Analyze_Equipment')"
+      }
+    }
+  ]
+}

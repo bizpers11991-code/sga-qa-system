@@ -1,0 +1,31 @@
+{
+  "name": "PushNotificationFlow",
+  "description": "Send push notifications via Teams",
+  "triggers": [
+    {
+      "type": "When an item is created",
+      "parameters": {
+        "site": "SGA Quality Assurance",
+        "list": "QA Packs"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "Send Push",
+      "type": "Post adaptive card in a chat or channel",
+      "parameters": {
+        "channel": "QA Notifications",
+        "card": {
+          "type": "AdaptiveCard",
+          "body": [
+            {
+              "type": "TextBlock",
+              "text": "New QA Pack Submitted!"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

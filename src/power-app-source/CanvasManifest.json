@@ -1,0 +1,31 @@
+{
+  "FormatVersion": "1.0",
+  "AppInfo": {
+    "Name": "SGA Foreman App",
+    "Authors": "",
+    "BackgroundColor": "rgba(255, 255, 255, 1)",
+    "DocumentAppType": "Phone",
+    "DocumentLayoutHeight": 1136,
+    "DocumentLayoutWidth": 640,
+    "DocumentLayoutOrientation": "portrait",
+    "AccessibilityEnabled": true,
+    "OfflineEnabled": true,
+    "ARSupported": true,
+    "CopilotIntegrated": true,
+    "GuidedModeSupported": true
+  },
+  "PublishInfo": {
+    "Publisher": "SGA"
+  },
+  "ScreenOrder": [
+    "DashboardScreen",
+    "JobDetailsScreen",
+    "QAPackScreen",
+    "IncidentReportScreen",
+    "SettingsScreen",
+    "GamificationScreen",
+    "AROverlayScreen",
+    "CollaborationScreen",
+    "VivaInsightsScreen"
+  ]
+}

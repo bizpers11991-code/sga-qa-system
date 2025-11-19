@@ -1,0 +1,381 @@
+JobAssignmentScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+    OnVisible: |
+        =// Load foremen for assignment dropdown (only users with Foreman role)
+        ClearCollect(
+            colForemen,
+            Filter(Users, 'Security Role' = "Foreman")
+        );
+        // Reset form
+        Set(varJobTitle, "");
+        Set(varJobDescription, "");
+        Set(varJobLocation, "");
+        Set(varSelectedForeman, Blank());
+        Set(varStartDate, Today());
+        Set(varEndDate, Today() + 7);
+        Set(varFormError, "")
+
+    # Created by: Worker #3 (Grok-code)
+    # Purpose: Engineers/Schedulers create jobs and assign to foremen
+    # Security: Only visible to Engineer and Scheduler roles
+
+    # ============================================
+    # HEADER
+    # ============================================
+
+    HeaderContainer As container.verticalAutoLayoutContainer:
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        X: =0
+        Y: =0
+        Width: =Parent.Width
+        Height: =100
+
+        BackButton As icon.ChevronLeft:
+            Icon: =Icon.ChevronLeft
+            Color: =RGBA(255, 255, 255, 1)  // White
+            X: =20
+            Y: =30
+            Width: =40
+            Height: =40
+            OnSelect: =Back()
+            AccessibilityLabel: ="Back to dashboard"
+
+        HeaderTitle As label:
+            Text: ="Create Job Assignment"
+            X: =70
+            Y: =25
+            Width: =450
+            Height: =50
+            Size: =24
+            FontWeight: =FontWeight.Bold
+            Color: =RGBA(255, 255, 255, 1)  // White text
+            AccessibilityLabel: ="Create job assignment screen"
+            Role: =AccessibilityRole.Heading
+
+    # ============================================
+    # FORM CONTAINER
+    # ============================================
+
+    FormScrollContainer As scrollableScreen:
+        X: =0
+        Y: =100
+        Width: =Parent.Width
+        Height: =Parent.Height - 160  // Leave room for header and submit button
+
+        # Job Title
+        JobTitleLabel As label:
+            Text: ="Job Title *"
+            X: =40
+            Y: =20
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)  // Dark gray
+
+        JobTitleInput As text:
+            Default: =varJobTitle
+            X: =40
+            Y: =55
+            Width: =520
+            Height: =50
+            Size: =16
+            HintText: ="e.g., Princes Highway Resurfacing"
+            OnChange: =Set(varJobTitle, Self.Text)
+            AccessibilityLabel: ="Job title input"
+            Required: =true
+
+        # Job Description
+        JobDescriptionLabel As label:
+            Text: ="Job Description *"
+            X: =40
+            Y: =125
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        JobDescriptionInput As text:
+            Mode: =TextMode.MultiLine
+            Default: =varJobDescription
+            X: =40
+            Y: =160
+            Width: =520
+            Height: =120
+            Size: =14
+            HintText: ="Describe the work to be performed, materials needed, safety requirements, etc."
+            OnChange: =Set(varJobDescription, Self.Text)
+            AccessibilityLabel: ="Job description input, multi-line"
+            Required: =true
+            MaxLength: =1000
+
+        CharacterCountLabel As label:
+            Text: =Len(varJobDescription) & " / 1000 characters"
+            X: =40
+            Y: =285
+            Width: =520
+            Height: =25
+            Size: =12
+            Color: =If(Len(varJobDescription) > 1000, RGBA(255, 0, 0, 1), RGBA(128, 128, 128, 1))
+            Align: =Align.Right
+
+        # Job Location
+        JobLocationLabel As label:
+            Text: ="Job Location *"
+            X: =40
+            Y: =320
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        JobLocationInput As text:
+            Default: =varJobLocation
+            X: =40
+            Y: =355
+            Width: =520
+            Height: =50
+            Size: =16
+            HintText: ="e.g., Princes Highway, Section 12-15"
+            OnChange: =Set(varJobLocation, Self.Text)
+            AccessibilityLabel: ="Job location input"
+            Required: =true
+
+        # Assign Foreman
+        AssignForemanLabel As label:
+            Text: ="Assign Foreman *"
+            X: =40
+            Y: =425
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        ForemanDropdown As dropdown:
+            Items: =colForemen
+            DisplayMode: =If(CountRows(colForemen) = 0, DisplayMode.Disabled, DisplayMode.Edit)
+            DefaultSelectedItems: =If(!IsBlank(varSelectedForeman), varSelectedForeman, Blank())
+            X: =40
+            Y: =460
+            Width: =520
+            Height: =50
+            SelectMultiple: =false
+            OnChange: =Set(varSelectedForeman, Self.Selected)
+            AccessibilityLabel: ="Select foreman to assign"
+            HintText: =If(CountRows(colForemen) = 0, "No foremen available", "Select a foreman")
+
+        NoForemenWarning As label:
+            Text: ="⚠️ No foremen found. Please add foremen in the admin panel."
+            X: =40
+            Y: =515
+            Width: =520
+            Height: =40
+            Size: =14
+            Color: =RGBA(255, 102, 0, 1)  // SGA Orange
+            Visible: =CountRows(colForemen) = 0
+            Align: =Align.Center
+
+        # Start Date
+        StartDateLabel As label:
+            Text: ="Start Date *"
+            X: =40
+            Y: =560
+            Width: =250
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        StartDatePicker As datePicker:
+            DefaultDate: =varStartDate
+            X: =40
+            Y: =595
+            Width: =250
+            Height: =50
+            OnChange: =Set(varStartDate, Self.SelectedDate)
+            AccessibilityLabel: ="Job start date picker"
+            Format: =DateTimeFormat.ShortDate
+
+        # End Date
+        EndDateLabel As label:
+            Text: ="End Date *"
+            X: =310
+            Y: =560
+            Width: =250
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        EndDatePicker As datePicker:
+            DefaultDate: =varEndDate
+            X: =310
+            Y: =595
+            Width: =250
+            Height: =50
+            OnChange: =Set(varEndDate, Self.SelectedDate)
+            AccessibilityLabel: ="Job end date picker"
+            Format: =DateTimeFormat.ShortDate
+
+        DateValidationWarning As label:
+            Text: ="⚠️ End date must be after start date"
+            X: =40
+            Y: =650
+            Width: =520
+            Height: =30
+            Size: =14
+            Color: =RGBA(255, 0, 0, 1)  // Red
+            Visible: =varEndDate <= varStartDate
+            Align: =Align.Center
+
+        # Priority (Optional)
+        PriorityLabel As label:
+            Text: ="Priority"
+            X: =40
+            Y: =690
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        PriorityDropdown As dropdown:
+            Items: =["Low", "Medium", "High", "Urgent"]
+            DefaultSelectedItems: =["Medium"]
+            X: =40
+            Y: =725
+            Width: =250
+            Height: =50
+            SelectMultiple: =false
+            OnChange: =Set(varJobPriority, Self.SelectedText.Value)
+            AccessibilityLabel: ="Select job priority"
+
+        # Notes (Optional)
+        NotesLabel As label:
+            Text: ="Additional Notes (Optional)"
+            X: =40
+            Y: =795
+            Width: =520
+            Height: =30
+            Size: =16
+            FontWeight: =FontWeight.Semibold
+            Color: =RGBA(51, 51, 51, 1)
+
+        NotesInput As text:
+            Mode: =TextMode.MultiLine
+            Default: =varJobNotes
+            X: =40
+            Y: =830
+            Width: =520
+            Height: =100
+            Size: =14
+            HintText: ="Any additional information, special instructions, or safety considerations"
+            OnChange: =Set(varJobNotes, Self.Text)
+            AccessibilityLabel: ="Additional notes input, optional"
+            MaxLength: =500
+
+    # ============================================
+    # SUBMIT BUTTON & ERROR DISPLAY
+    # ============================================
+
+    ErrorMessageLabel As label:
+        Text: =varFormError
+        X: =40
+        Y: =Parent.Height - 130
+        Width: =520
+        Height: =50
+        Size: =14
+        Color: =RGBA(255, 0, 0, 1)  // Red
+        Visible: =!IsBlank(varFormError)
+        Align: =Align.Center
+        VerticalAlign: =VerticalAlign.Middle
+
+    SubmitJobButton As button:
+        Text: ="Create Job & Notify Foreman"
+        X: =40
+        Y: =Parent.Height - 70
+        Width: =520
+        Height: =60
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+        Size: =18
+        FontWeight: =FontWeight.Bold
+        DisplayMode: =If(
+            IsBlank(varJobTitle) Or IsBlank(varJobDescription) Or IsBlank(varJobLocation) Or
+            IsBlank(varSelectedForeman) Or varEndDate <= varStartDate,
+            DisplayMode.Disabled,
+            DisplayMode.Edit
+        )
+        OnSelect: |
+            =// Validate form
+            If(
+                IsBlank(varJobTitle),
+                Set(varFormError, "Job title is required");
+                ,
+                IsBlank(varJobDescription),
+                Set(varFormError, "Job description is required");
+                ,
+                IsBlank(varJobLocation),
+                Set(varFormError, "Job location is required");
+                ,
+                IsBlank(varSelectedForeman),
+                Set(varFormError, "Please select a foreman");
+                ,
+                varEndDate <= varStartDate,
+                Set(varFormError, "End date must be after start date");
+                ,
+                // All validations passed - create job
+                Set(varFormError, "");
+
+                // Create job in Dataverse
+                Patch(
+                    Jobs,
+                    Defaults(Jobs),
+                    {
+                        'Job Title': varJobTitle,
+                        'Description': varJobDescription,
+                        'Location': varJobLocation,
+                        'Assigned Foreman': varSelectedForeman,
+                        'Created By': User(),
+                        'Start Date': varStartDate,
+                        'End Date': varEndDate,
+                        'Status': "Pending",
+                        'Priority': If(IsBlank(varJobPriority), "Medium", varJobPriority),
+                        'Notes': varJobNotes
+                    }
+                );
+
+                // Trigger Power Automate flow: JobAssignmentNotification
+                // TODO: Implement Power Automate flow trigger
+                // JobAssignmentNotificationFlow.Run({
+                //     jobId: Last(Jobs).ID,
+                //     foremanEmail: varSelectedForeman.Email,
+                //     foremanName: varSelectedForeman.'Full Name'
+                // });
+
+                // Show success message
+                Notify(
+                    "Job created and notification sent to " & varSelectedForeman.'Full Name',
+                    NotificationType.Success
+                );
+
+                // Navigate back to dashboard
+                Navigate(DashboardScreen, ScreenTransition.None)
+            )
+        AccessibilityLabel: ="Submit job assignment button"
+
+    # ============================================
+    # ACCESSIBILITY & SECURITY
+    # ============================================
+
+    # This screen should only be visible to users with Engineer or Scheduler roles
+    # Implement role-based access control in App.OnStart:
+    #
+    # If(
+    #     !(User().'Security Role' = "Engineer" Or User().'Security Role' = "Scheduler"),
+    #     Navigate(DashboardScreen);
+    #     Notify("You don't have permission to create jobs", NotificationType.Error)
+    # )

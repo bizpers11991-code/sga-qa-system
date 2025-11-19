@@ -1,0 +1,360 @@
+CopilotScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+    OnVisible: |-
+        =// Initialize chat history collection if empty
+        If(
+            IsEmpty(colChatHistory),
+            ClearCollect(
+                colChatHistory,
+                {
+                    role: "assistant",
+                    message: "Hello! I'm your SGA Construction Assistant. I can help you with QA packs, daily reports, incidents, asphalt testing procedures, and general construction questions. How can I help you today?",
+                    timestamp: Now()
+                }
+            )
+        );
+        // Load user context for AI
+        Set(varUserContext, {
+            email: User().Email,
+            name: User().FullName,
+            division: LookUp(Users, Email = User().Email, Division) // Assumes Users table exists
+        })
+
+    # Header Section
+    HeaderContainer As container:
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+
+        LogoImage As image:
+            Image: =App.Logo
+            X: =20
+            Y: =15
+            Width: =80
+            Height: =50
+
+        TitleLabel As label:
+            Text: ="SGA Assistant"
+            X: =110
+            Y: =20
+            Width: =400
+            Height: =40
+            Size: =24
+            FontWeight: =FontWeight.Bold
+            Color: =RGBA(255, 255, 255, 1)  // White text
+            AccessibilityLabel: ="SGA Assistant - AI Chat Interface"
+            Role: =AccessibilityRole.Heading
+
+        BackButton As icon:
+            Icon: =Icon.ChevronLeft
+            X: =580
+            Y: =25
+            Width: =40
+            Height: =40
+            Color: =RGBA(255, 255, 255, 1)
+            OnSelect: =Navigate(DashboardScreen, ScreenTransition.Fade)
+            AccessibilityLabel: ="Go back to dashboard"
+
+    # Chat Messages Gallery
+    ChatMessagesGallery As gallery.verticalGallery:
+        Items: =colChatHistory
+        Layout: =Layout.Vertical
+        X: =20
+        Y: =100
+        Width: =600
+        Height: =900
+        TemplateSize: =150
+        TemplatePadding: =10
+        ShowScrollbar: =true
+        AccessibilityLabel: ="Chat conversation history"
+
+        # User Message Bubble (right-aligned)
+        UserMessageContainer As container:
+            X: =If(ThisItem.role = "user", 200, 20)
+            Y: =10
+            Width: =380
+            Height: =Parent.TemplateHeight - 20
+            Fill: =If(ThisItem.role = "user", RGBA(0, 120, 212, 1), RGBA(225, 225, 225, 1))  // Blue for user, gray for assistant
+            Visible: =true
+
+            MessageText As label:
+                Text: =ThisItem.message
+                X: =15
+                Y: =15
+                Width: =350
+                Height: =Parent.Height - 50
+                Size: =14
+                Color: =If(ThisItem.role = "user", RGBA(255, 255, 255, 1), RGBA(51, 51, 51, 1))  // White text for user, dark gray for assistant
+                Wrap: =true
+                VerticalAlign: =VerticalAlign.Top
+                AccessibilityLabel: =If(ThisItem.role = "user", "You said: ", "Assistant replied: ") & ThisItem.message
+
+            TimestampLabel As label:
+                Text: =Text(ThisItem.timestamp, "[$-en-US]hh:mm AM/PM")
+                X: =15
+                Y: =Parent.Height - 30
+                Width: =350
+                Height: =25
+                Size: =11
+                Color: =If(ThisItem.role = "user", RGBA(255, 255, 255, 0.7), RGBA(100, 100, 100, 1))
+                FontWeight: =FontWeight.Lighter
+
+    # Input Section
+    InputContainer As container:
+        X: =0
+        Y: =1020
+        Width: =640
+        Height: =100
+        Fill: =RGBA(255, 255, 255, 1)
+        BorderStyle: =BorderStyle.Solid
+        BorderColor: =RGBA(200, 200, 200, 1)
+        BorderThickness: =2
+
+        MessageInput As text:
+            Default: =""
+            Hint: ="Ask me anything about QA packs, jobs, or safety procedures..."
+            X: =20
+            Y: =20
+            Width: =500
+            Height: =60
+            Size: =14
+            Mode: =TextMode.MultiLine
+            MaxLength: =500
+            AccessibilityLabel: ="Type your message here"
+            OnEnter: |-
+                =// Send message when Enter is pressed
+                If(
+                    Not(IsBlank(Self.Text)),
+                    Set(varSendingMessage, true);
+                    // Add user message to chat history
+                    Collect(
+                        colChatHistory,
+                        {
+                            role: "user",
+                            message: Self.Text,
+                            timestamp: Now()
+                        }
+                    );
+                    // Store message for API call
+                    Set(varUserMessage, Self.Text);
+                    // Clear input immediately
+                    Reset(Self);
+                    // Call Power Automate flow to get AI response
+                    Set(
+                        varAIResponse,
+                        PowerAutomate.Run(
+                            "ChatbotFlow",
+                            {
+                                message: varUserMessage,
+                                conversationHistory: JSON(colChatHistory),
+                                userId: User().Email
+                            }
+                        )
+                    );
+                    // Add AI response to chat history
+                    If(
+                        Not(IsBlank(varAIResponse.response)),
+                        Collect(
+                            colChatHistory,
+                            {
+                                role: "assistant",
+                                message: varAIResponse.response,
+                                timestamp: Now()
+                            }
+                        ),
+                        Collect(
+                            colChatHistory,
+                            {
+                                role: "assistant",
+                                message: "Sorry, I encountered an error. Please try again.",
+                                timestamp: Now()
+                            }
+                        )
+                    );
+                    Set(varSendingMessage, false)
+                )
+
+        SendButton As icon:
+            Icon: =Icon.Send
+            X: =540
+            Y: =30
+            Width: =60
+            Height: =40
+            Color: =If(IsBlank(MessageInput.Text) Or varSendingMessage, RGBA(200, 200, 200, 1), RGBA(255, 102, 0, 1))  // SGA Orange when active
+            OnSelect: |-
+                =// Send message on button click
+                If(
+                    Not(IsBlank(MessageInput.Text)) And Not(varSendingMessage),
+                    Set(varSendingMessage, true);
+                    // Add user message to chat history
+                    Collect(
+                        colChatHistory,
+                        {
+                            role: "user",
+                            message: MessageInput.Text,
+                            timestamp: Now()
+                        }
+                    );
+                    // Store message for API call
+                    Set(varUserMessage, MessageInput.Text);
+                    // Clear input immediately
+                    Reset(MessageInput);
+                    // Call Power Automate flow to get AI response
+                    IfError(
+                        Set(
+                            varAIResponse,
+                            PowerAutomate.Run(
+                                "ChatbotFlow",
+                                {
+                                    message: varUserMessage,
+                                    conversationHistory: JSON(colChatHistory),
+                                    userId: User().Email
+                                }
+                            )
+                        );
+                        // Add AI response to chat history
+                        If(
+                            Not(IsBlank(varAIResponse.response)),
+                            Collect(
+                                colChatHistory,
+                                {
+                                    role: "assistant",
+                                    message: varAIResponse.response,
+                                    timestamp: Now()
+                                }
+                            ),
+                            Collect(
+                                colChatHistory,
+                                {
+                                    role: "assistant",
+                                    message: "Sorry, I couldn't get a response right now. Please try again.",
+                                    timestamp: Now()
+                                }
+                            )
+                        );
+                        Set(varSendingMessage, false)
+                    ,
+                        // Error handling
+                        Collect(
+                            colChatHistory,
+                            {
+                                role: "assistant",
+                                message: "Error: " & FirstError.Message & ". Please try again or contact support.",
+                                timestamp: Now()
+                            }
+                        );
+                        Set(varSendingMessage, false);
+                        Trace("Chat error", TraceSeverity.Error, {Error: FirstError, Message: varUserMessage})
+                    )
+                )
+            AccessibilityLabel: ="Send message button"
+            Disabled: =IsBlank(MessageInput.Text) Or varSendingMessage
+
+    # Loading Indicator
+    LoadingIndicator As label:
+        Text: ="Thinking..."
+        X: =270
+        Y: =1030
+        Width: =100
+        Height: =30
+        Size: =14
+        Color: =RGBA(255, 102, 0, 1)  // SGA Orange
+        FontWeight: =FontWeight.Semibold
+        Visible: =varSendingMessage
+        AccessibilityLabel: ="AI is processing your message"
+
+    # Quick Action Buttons
+    QuickActionsContainer As container:
+        X: =20
+        Y: =1140
+        Width: =600
+        Height: =100
+        Fill: =RGBA(248, 248, 248, 1)
+
+        QuickAction1 As button:
+            Text: ="Show My Jobs"
+            X: =0
+            Y: =10
+            Width: =145
+            Height: =40
+            Fill: =RGBA(255, 255, 255, 1)
+            Color: =RGBA(51, 51, 51, 1)
+            BorderStyle: =BorderStyle.Solid
+            BorderColor: =RGBA(255, 102, 0, 1)
+            BorderThickness: =2
+            OnSelect: |-
+                =// Add pre-filled message to input
+                Set(MessageInput.Text, "What are my assigned jobs?");
+                // Trigger send
+                Select(SendButton)
+            AccessibilityLabel: ="Ask about your assigned jobs"
+
+        QuickAction2 As button:
+            Text: ="QA Status"
+            X: =155
+            Y: =10
+            Width: =145
+            Height: =40
+            Fill: =RGBA(255, 255, 255, 1)
+            Color: =RGBA(51, 51, 51, 1)
+            BorderStyle: =BorderStyle.Solid
+            BorderColor: =RGBA(255, 102, 0, 1)
+            BorderThickness: =2
+            OnSelect: |-
+                =Set(MessageInput.Text, "Check my QA pack status");
+                Select(SendButton)
+            AccessibilityLabel: ="Ask about QA pack status"
+
+        QuickAction3 As button:
+            Text: ="Asphalt Testing"
+            X: =310
+            Y: =10
+            Width: =145
+            Height: =40
+            Fill: =RGBA(255, 255, 255, 1)
+            Color: =RGBA(51, 51, 51, 1)
+            BorderStyle: =BorderStyle.Solid
+            BorderColor: =RGBA(255, 102, 0, 1)
+            BorderThickness: =2
+            OnSelect: |-
+                =Set(MessageInput.Text, "Explain asphalt temperature requirements");
+                Select(SendButton)
+            AccessibilityLabel: ="Ask about asphalt testing procedures"
+
+        QuickAction4 As button:
+            Text: ="Clear Chat"
+            X: =455
+            Y: =10
+            Width: =145
+            Height: =40
+            Fill: =RGBA(255, 255, 255, 1)
+            Color: =RGBA(200, 0, 0, 1)  // Red text
+            BorderStyle: =BorderStyle.Solid
+            BorderColor: =RGBA(200, 0, 0, 1)
+            BorderThickness: =2
+            OnSelect: |-
+                =// Clear chat history and restart
+                Clear(colChatHistory);
+                ClearCollect(
+                    colChatHistory,
+                    {
+                        role: "assistant",
+                        message: "Chat cleared. How can I help you?",
+                        timestamp: Now()
+                    }
+                )
+            AccessibilityLabel: ="Clear chat history"
+
+    # Help Text
+    HelpText As label:
+        Text: ="💡 Tip: Ask me about jobs, QA packs, incidents, safety procedures, or testing requirements"
+        X: =20
+        Y: =1250
+        Width: =600
+        Height: =50
+        Size: =12
+        Color: =RGBA(100, 100, 100, 1)
+        Align: =Align.Center
+        Wrap: =true

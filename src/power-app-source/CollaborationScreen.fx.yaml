@@ -1,0 +1,71 @@
+CollaborationScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    TitleLabel As label:
+        Text: ="Chat with Engineer"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    ChatGallery As gallery.verticalGallery:
+        Items: =Filter(TeamsMessages, JobID = jobID)
+        X: =20
+        Y: =100
+        Width: =600
+        Height: =800
+        TemplateSize: =60
+
+        MessageLabel As label:
+            Text: =ThisItem.Message
+            X: =10
+            Y: =10
+            Width: =580
+            Height: =40
+            Size: =14
+
+    MessageInput As textInput:
+        X: =20
+        Y: =920
+        Width: =500
+        Height: =50
+        HintText: ="Type message..."
+
+    SendButton As button:
+        Text: ="Send"
+        X: =540
+        Y: =920
+        Width: =80
+        Height: =50
+        OnSelect: |-
+            =Teams.SendMessage({Channel: "QA Reviews", Message: MessageInput.Text});
+            Reset(MessageInput)
+
+    # Offline Copilot cache
+    OfflineCacheLabel As label:
+        Text: =If(Connection.Connected, "", "Offline: Using cached Copilot responses")
+        X: =20
+        Y: =920
+        Width: =400
+        Height: =30
+        Size: =14
+        Color: =RGBA(255, 165, 0, 1)
+
+    BackButton As button:
+        Text: ="Back"
+        X: =200
+        Y: =990
+        Width: =240
+        Height: =60
+        OnSelect: =Navigate(JobDetailsScreen)

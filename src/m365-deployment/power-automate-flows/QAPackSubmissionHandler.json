@@ -1,0 +1,267 @@
+{
+  "name": "QA Pack Submission Handler",
+  "description": "Processes QA pack submissions, generates PDF, sends notifications, triggers AI summary",
+  "trigger": {
+    "type": "When a row is added, modified or deleted",
+    "inputs": {
+      "entityName": "msdyn_qapacks",
+      "scope": "Organization",
+      "filterExpression": "msdyn_status eq 1"
+    }
+  },
+  "actions": [
+    {
+      "name": "Check_if_new_submission",
+      "type": "Condition",
+      "expression": "@triggerOutputs()?['body/msdyn_version']",
+      "equals": 1,
+      "actions": {
+        "yes": [
+          {
+            "name": "Get_related_job",
+            "type": "Get a row by ID",
+            "inputs": {
+              "entityName": "msdyn_jobs",
+              "rowId": "@triggerOutputs()?['body/_msdyn_job_value']"
+            }
+          },
+          {
+            "name": "Get_daily_report",
+            "type": "List rows",
+            "inputs": {
+              "entityName": "msdyn_dailyreports",
+              "filter": "_msdyn_qapack_value eq '@{triggerOutputs()?['body/msdyn_qapackid']}'"
+            }
+          },
+          {
+            "name": "Get_asphalt_placement",
+            "type": "List rows",
+            "inputs": {
+              "entityName": "msdyn_asphaltplacements",
+              "filter": "_msdyn_qapack_value eq '@{triggerOutputs()?['body/msdyn_qapackid']}'"
+            }
+          },
+          {
+            "name": "Get_asphalt_placement_rows",
+            "type": "List rows",
+            "inputs": {
+              "entityName": "msdyn_asphaltplacementrows",
+              "filter": "_msdyn_asphaltplacement_value eq '@{outputs('Get_asphalt_placement')?['body/value'][0]['msdyn_asphaltplacementid']}'",
+              "orderBy": "msdyn_sequencenumber"
+            }
+          },
+          {
+            "name": "Get_site_photos",
+            "type": "List rows",
+            "inputs": {
+              "entityName": "msdyn_sitephotos",
+              "filter": "_msdyn_qapack_value eq '@{triggerOutputs()?['body/msdyn_qapackid']}'",
+              "orderBy": "msdyn_sequencenumber"
+            }
+          },
+          {
+            "name": "Generate_PDF",
+            "type": "Populate a Microsoft Word template",
+            "inputs": {
+              "location": "@parameters('SharePointSiteURL')",
+              "library": "Word Templates",
+              "file": "QAPackTemplate.docx",
+              "parameters": {
+                "JobNumber": "@outputs('Get_related_job')?['body/msdyn_jobnumber']",
+                "Client": "@outputs('Get_related_job')?['body/msdyn_client']",
+                "ProjectName": "@outputs('Get_related_job')?['body/msdyn_projectname']",
+                "Location": "@outputs('Get_related_job')?['body/msdyn_location']",
+                "Date": "@formatDateTime(outputs('Get_daily_report')?['body/value'][0]['msdyn_date'], 'dd/MM/yyyy')",
+                "ForemanName": "@triggerOutputs()?['body/msdyn_submittedby']",
+                "TotalTonnes": "@sum(outputs('Get_asphalt_placement_rows')?['body/value'], 'msdyn_tonnes')",
+                "PlacementRows": "@outputs('Get_asphalt_placement_rows')?['body/value']"
+              }
+            }
+          },
+          {
+            "name": "Convert_Word_to_PDF",
+            "type": "Convert file",
+            "inputs": {
+              "file": "@outputs('Generate_PDF')?['body']",
+              "targetType": "pdf"
+            }
+          },
+          {
+            "name": "Create_PDF_file",
+            "type": "Create file",
+            "inputs": {
+              "location": "@parameters('SharePointSiteURL')",
+              "folderPath": "/QA Pack PDFs/@{formatDateTime(utcNow(), 'yyyy-MM')}",
+              "name": "SGA-@{replace(replace(replace(outputs('Get_related_job')?['body/msdyn_jobnumber'], '/', '_'), '\\', '_'), ':', '_')}-@{replace(replace(replace(outputs('Get_related_job')?['body/msdyn_projectname'], '/', '_'), '\\', '_'), ':', '_')}-QAPack.pdf",
+              "body": "@outputs('Convert_Word_to_PDF')?['body']"
+            }
+          },
+          {
+            "name": "Update_QA_Pack_with_PDF_URL",
+            "type": "Update a row",
+            "inputs": {
+              "entityName": "msdyn_qapacks",
+              "rowId": "@triggerOutputs()?['body/msdyn_qapackid']",
+              "item": {
+                "msdyn_pdfurl": "@outputs('Create_PDF_file')?['body/{Link}']"
+              }
+            }
+          },
+          {
+            "name": "Send_Teams_notification",
+            "type": "Post adaptive card in a chat or channel",
+            "inputs": {
+              "recipient": {
+                "channelId": "@if(equals(outputs('Get_related_job')?['body/msdyn_division'], 1), parameters('TeamsWebhookAsphalt'), if(equals(outputs('Get_related_job')?['body/msdyn_division'], 2), parameters('TeamsWebhookProfiling'), parameters('TeamsWebhookSpray')))"
+              },
+              "message": {
+                "type": "AdaptiveCard",
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "version": "1.5",
+                "body": [
+                  {
+                    "type": "TextBlock",
+                    "text": "QA Pack Submitted",
+                    "weight": "Bolder",
+                    "size": "Large",
+                    "color": "Accent"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "A new QA Pack has been submitted and is ready for review. AI summary is being generated.",
+                    "wrap": true
+                  }
+                ],
+                "actions": [
+                  {
+                    "type": "Action.OpenUrl",
+                    "title": "Review in App",
+                    "url": "@{parameters('PowerAppURL')}/main.aspx?etn=msdyn_qapack&id=@{triggerOutputs()?['body/msdyn_qapackid']}"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "Call_Azure_Function_Generate_AI_Summary",
+            "type": "HTTP",
+            "inputs": {
+              "method": "POST",
+              "uri": "@parameters('AzureFunctionURL')/api/GenerateAISummary",
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": {
+                "qaPackId": "@triggerOutputs()?['body/msdyn_qapackid']",
+                "jobNumber": "@outputs('Get_related_job')?['body/msdyn_jobnumber']",
+                "client": "@outputs('Get_related_job')?['body/msdyn_client']",
+                "dailyReport": "@outputs('Get_daily_report')?['body/value'][0]",
+                "asphaltPlacement": "@outputs('Get_asphalt_placement')?['body/value'][0]",
+                "placementRows": "@outputs('Get_asphalt_placement_rows')?['body/value']"
+              },
+              "authentication": {
+                "type": "ManagedServiceIdentity"
+              }
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M",
+              "minimumInterval": "PT5S"
+            }
+          },
+          {
+            "name": "Update_QA_Pack_with_AI_Summary",
+            "type": "Update a row",
+            "inputs": {
+              "entityName": "msdyn_qapacks",
+              "rowId": "@triggerOutputs()?['body/msdyn_qapackid']",
+              "item": {
+                "msdyn_expertsummary": "@outputs('Call_Azure_Function_Generate_AI_Summary')?['body/summary']",
+                "msdyn_expertsummarystatus": 2
+              }
+            }
+          },
+          {
+            "name": "Send_Teams_Summary_Update",
+            "type": "Post message in a chat or channel",
+            "inputs": {
+              "recipient": {
+                "channelId": "@parameters('TeamsWebhookSummary')"
+              },
+              "message": {
+                "type": "AdaptiveCard",
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "version": "1.5",
+                "body": [
+                  {
+                    "type": "TextBlock",
+                    "text": "Executive Summary Available",
+                    "weight": "Bolder",
+                    "size": "Medium"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "@{outputs('Call_Azure_Function_Generate_AI_Summary')?['body/summary']}",
+                    "wrap": true
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "Please check the QA Pack system for full details.",
+                    "wrap": true,
+                    "size": "Small"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "parameters": {
+    "SharePointSiteURL": {
+      "type": "String",
+      "metadata": {
+        "description": "SharePoint site URL for document storage"
+      }
+    },
+    "TeamsWebhookAsphalt": {
+      "type": "String",
+      "metadata": {
+        "description": "Teams webhook for Asphalt division"
+      }
+    },
+    "TeamsWebhookProfiling": {
+      "type": "String",
+      "metadata": {
+        "description": "Teams webhook for Profiling division"
+      }
+    },
+    "TeamsWebhookSpray": {
+      "type": "String",
+      "metadata": {
+        "description": "Teams webhook for Spray division"
+      }
+    },
+    "TeamsWebhookSummary": {
+      "type": "String",
+      "metadata": {
+        "description": "Teams webhook for executive summaries"
+      }
+    },
+    "AzureFunctionURL": {
+      "type": "String",
+      "metadata": {
+        "description": "Azure Function App URL"
+      }
+    },
+    "PowerAppURL": {
+      "type": "String",
+      "metadata": {
+        "description": "Power Apps environment URL"
+      }
+    }
+  }
+}

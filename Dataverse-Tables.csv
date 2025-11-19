@@ -1,0 +1,13 @@
+Display Name,Plural Name,Description,Primary Column Name,Primary Column Type
+Foreman,Foremen,Construction foremen and crew leaders,Name,Single Line of Text
+ITP Template,ITP Templates,Inspection and Test Plan templates,Template Name,Single Line of Text
+Job,Jobs,Construction job records,Job Number,Single Line of Text
+QA Pack,QA Packs,Quality assurance documentation submissions,QA Pack Number,Single Line of Text
+Daily Report,Daily Reports,Daily foreman field reports,Report Date,Date Only
+Incident,Incidents,Safety and quality incident reports,Incident Number,Single Line of Text
+NCR,NCRs,Non-conformance reports,NCR Number,Single Line of Text
+Sampling Plan,Sampling Plans,Material testing and core sampling plans,Plan Name,Single Line of Text
+Resource,Resources,Equipment materials and crew resources,Resource Name,Single Line of Text
+Site Photo,Site Photos,Job site photographs and documentation,Photo Name,Single Line of Text
+Asphalt Placement,Asphalt Placements,Asphalt placement records,Placement Date,Date Only
+Straight Edge Report,Straight Edge Reports,Surface profile testing reports,Report Date,Date Only

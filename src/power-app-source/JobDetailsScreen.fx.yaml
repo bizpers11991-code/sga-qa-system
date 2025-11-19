@@ -1,0 +1,114 @@
+JobDetailsScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    HeaderLabel As label:
+        Text: ="Job Details"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    JobNumberLabel As label:
+        Text: ="Job Number: " & selectedJob.JobNumber
+        X: =20
+        Y: =100
+        Width: =600
+        Height: =40
+        Size: =18
+
+    ClientLabel As label:
+        Text: ="Client: " & selectedJob.Client
+        X: =20
+        Y: =150
+        Width: =600
+        Height: =40
+        Size: =18
+
+    ProjectNameLabel As label:
+        Text: ="Project: " & selectedJob.ProjectName
+        X: =20
+        Y: =200
+        Width: =600
+        Height: =40
+        Size: =18
+
+    LocationLabel As label:
+        Text: ="Location: " & selectedJob.Location
+        X: =20
+        Y: =250
+        Width: =600
+        Height: =40
+        Size: =18
+
+    # Real-Time Collaboration: Chat with Engineer
+    ChatButton As button:
+        Text: ="Chat with Engineer"
+        X: =20
+        Y: =300
+        Width: =200
+        Height: =50
+        OnSelect: =Navigate(CollaborationScreen, ScreenTransition.Fade, {jobID: selectedJob.ID})
+
+    # AR Overlay: Scan Equipment
+    AROverlayButton As button:
+        Text: ="AR Equipment Guide"
+        X: =240
+        Y: =300
+        Width: =200
+        Height: =50
+        OnSelect: =Navigate(AROverlayScreen, ScreenTransition.Fade, {jobID: selectedJob.ID})
+
+    # IoT Integration: Oasure 2 PRO & iPad GPS
+    SensorDataLabel As label:
+        Text: ="Current Temp: " & varSensorData.Value & "°C | GPS: " & Text(varGPSLocation.Latitude, "0.######") & ", " & Text(varGPSLocation.Longitude, "0.######")
+        X: =20
+        Y: =370
+        Width: =600
+        Height: =40
+        Size: =16
+        Color: =RGBA(0, 128, 0, 1)
+
+    RefreshSensorsButton As button:
+        Text: ="Refresh Sensors"
+        X: =20
+        Y: =420
+        Width: =150
+        Height: =40
+        OnSelect: |-
+            =IfError(
+                // Check Bluetooth availability first
+                If(BluetoothLE.IsAvailable(),
+                    Set(varSensorData, BluetoothLE.ReadCharacteristic("Oasure2Pro", "TempCharacteristic")),
+                    Notify("Bluetooth not available", NotificationType.Warning)
+                );
+                // GPS with error handling
+                If(Location.Enabled,
+                    Set(varGPSLocation, Location.Position),
+                    Notify("GPS not enabled", NotificationType.Warning)
+                );
+                Notify("Sensors updated", NotificationType.Success)
+            ,
+                // Error handler
+                Notify("Sensor update failed: " & FirstError.Message, NotificationType.Error);
+                Trace("Sensor error", TraceSeverity.Error, {Error: FirstError, JobID: selectedJob.ID})
+            )
+
+    ButtonStartQAPack As button:
+        Text: ="Start/Edit QA Pack"
+        X: =120
+        Y: =960
+        Width: =400
+        Height: =70
+        OnSelect: |-
+            =Navigate(QAPackScreen, ScreenTransition.None, {selectedJob: selectedJob})

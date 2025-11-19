@@ -1,0 +1,45 @@
+AROverlayScreen As screen:
+    Fill: =RGBA(0, 0, 0, 1)
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =20
+        Width: =60
+        Height: =30
+
+    CameraControl As camera:
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =1136
+        Stream: =true
+        ARMode: =true
+
+    OverlayLabel As label:
+        Text: ="Scan QR on Equipment for AR Guide"
+        X: =100
+        Y: =50
+        Width: =440
+        Height: =50
+        Size: =18
+        Color: =RGBA(255, 255, 255, 1)
+        Align: =Align.Center
+
+    ARGuideText As label:
+        Text: ="Step 1: Check temperature\nStep 2: Verify alignment\nStep 3: Record readings"
+        X: =50
+        Y: =500
+        Width: =540
+        Height: =300
+        Size: =16
+        Color: =RGBA(255, 255, 255, 1)
+        Visible: =varQRDetected
+
+    BackButton As button:
+        Text: ="Back"
+        X: =20
+        Y: =1050
+        Width: =100
+        Height: =50
+        OnSelect: =Navigate(JobDetailsScreen)

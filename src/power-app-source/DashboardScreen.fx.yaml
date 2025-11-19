@@ -1,0 +1,170 @@
+DashboardScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+    OnVisible: |
+        =// Load submitted job IDs for delegation-friendly filtering
+        ClearCollect(
+            colSubmittedJobIds,
+            ShowColumns('QA Packs', "Job")
+        )
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =20
+        Width: =100
+        Height: =50
+
+    WelcomeLabel As label:
+        Text: ="Welcome, " & User().FullName
+        X: =140
+        Y: =20
+        Width: =480
+        Height: =50
+        Size: =24
+        FontWeight: =FontWeight.Bold
+        Color: =RGBA(51, 51, 51, 1)  // Dark gray text
+        AccessibilityLabel: ="Welcome message for " & User().FullName
+        Role: =AccessibilityRole.Heading
+
+    # Gamification elements with Copilot personalization
+    PointsLabel As label:
+        Text: ="Points: " & varUserPoints
+        X: =140
+        Y: =70
+        Width: =200
+        Height: =30
+        Size: =16
+        Color: =RGBA(255, 102, 0, 1)  // SGA Orange
+
+    LeaderboardButton As button:
+        Text: ="View Leaderboard"
+        X: =500
+        Y: =20
+        Width: =120
+        Height: =40
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+        OnSelect: =Navigate(GamificationScreen)
+        AccessibilityLabel: ="View leaderboard button"
+
+    # Guided Mode Toggle
+    GuidedModeToggle As toggle:
+        Text: ="Guided Mode"
+        X: =20
+        Y: =110
+        Width: =150
+        Height: =40
+        Default: =varGuidedMode
+        OnChange: =Set(varGuidedMode, Self.Value); If(Self.Value, Notify("Guided mode enabled - Copilot will assist!", NotificationType.Success))
+        AccessibilityLabel: ="Guided mode toggle, currently " & If(varGuidedMode, "enabled", "disabled")
+
+    # Copilot Chat Button
+    CopilotButton As button:
+        Text: ="Ask Copilot"
+        X: =180
+        Y: =110
+        Width: =120
+        Height: =40
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+        OnSelect: =Navigate(CopilotScreen)
+
+    OpenJobsGallery As gallery.verticalGallery:
+        Items: |-
+            =Filter(Jobs, AssignedForeman.Email = User().Email And Not(ThisItem.ID in colSubmittedJobIds.Job.Id))
+        Layout: =Layout.Vertical
+        X: =40
+        Y: =120
+        Width: =560
+        Height: =800
+        TemplateSize: =140
+
+        JobTitleLabel As label:
+            Text: =ThisItem.JobNumber & " - " & ThisItem.Client
+            X: =20
+            Y: =20
+            Width: =300
+            Height: =40
+            Size: =18
+            FontWeight: =FontWeight.Semibold
+            AccessibilityLabel: ="Job " & ThisItem.JobNumber & " for client " & ThisItem.Client
+
+        DueDateLabel As label:
+            Text: ="Due: " & Text(ThisItem.DueDate, "[$-en-US]mm/dd/yyyy")
+            X: =20
+            Y: =60
+            Width: =300
+            Height: =40
+            Size: =16
+
+        # Advanced AI Integration: Risk Analysis
+        RiskScoreLabel As label:
+            Text: ="Risk Score: " & LookUp(AIRiskScores, JobID = ThisItem.ID, Score)
+            X: =20
+            Y: =90
+            Width: =150
+            Height: =30
+            Size: =14
+            Color: =If(Value(LookUp(AIRiskScores, JobID = ThisItem.ID, Score)) > 7, RGBA(255, 0, 0, 1), RGBA(0, 128, 0, 1))
+
+        AnalyzeRiskButton As button:
+            Text: ="Analyze Risk"
+            X: =180
+            Y: =85
+            Width: =120
+            Height: =40
+            AccessibilityLabel: ="Analyze risk for job " & ThisItem.JobNumber
+            OnSelect: |-
+                =IfError(
+                    Set(varRiskAnalysis, PowerAutomate.Run("AnalyzeJobRisk", {JobID: ThisItem.ID}));
+                    UpdateContext({showRiskModal: true});
+                    // Logging for security and audit
+                    Patch(AppLogs, Defaults(AppLogs), {User: User().Email, Action: "Risk Analysis Requested", JobID: ThisItem.ID, Timestamp: Now()});
+                ,
+                    // Enhanced error handling
+                    Notify("Risk analysis failed: " & FirstError.Message, NotificationType.Error);
+                    // Log error details
+                    Patch(AppLogs, Defaults(AppLogs), {User: User().Email, Action: "Risk Analysis Failed", JobID: ThisItem.ID, Error: FirstError.Message, Timestamp: Now()});
+                    Trace("Risk analysis error", TraceSeverity.Error, {JobID: ThisItem.ID, Error: FirstError})
+                )
+
+        StartQAPackButton As button:
+            Text: ="Start QA Pack"
+            X: =360
+            Y: =30
+            Width: =180
+            Height: =60
+            OnSelect: |-
+                =Navigate(QAPackScreen, ScreenTransition.None, {selectedJob: Self.Selected})
+            AccessibilityLabel: ="Start QA Pack for job " & ThisItem.JobNumber
+
+    # Risk Analysis Modal
+    RiskModal As modal:
+        Visible: =showRiskModal
+        X: =50
+        Y: =200
+        Width: =540
+        Height: =600
+
+        RiskTitleLabel As label:
+            Text: ="AI Risk Analysis"
+            X: =20
+            Y: =20
+            Size: =20
+            FontWeight: =FontWeight.Bold
+
+        RiskDetailsLabel As label:
+            Text: =varRiskAnalysis
+            X: =20
+            Y: =60
+            Width: =500
+            Height: =480
+            Size: =16
+
+        CloseRiskButton As button:
+            Text: ="Close"
+            X: =220
+            Y: =550
+            Width: =100
+            Height: =40
+            OnSelect: =UpdateContext({showRiskModal: false})

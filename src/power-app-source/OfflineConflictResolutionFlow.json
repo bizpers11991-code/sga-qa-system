@@ -1,0 +1,34 @@
+{
+  "name": "OfflineConflictResolutionFlow",
+  "description": "Resolve offline sync conflicts",
+  "triggers": [
+    {
+      "type": "Power Apps",
+      "parameters": {
+        "input": {
+          "Conflicts": "array"
+        }
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "Resolve Conflicts",
+      "type": "Apply to each",
+      "parameters": {
+        "array": "@triggerBody()['Conflicts']",
+        "actions": {
+          "Merge": {
+            "type": "Update item",
+            "parameters": {
+              "site": "SGA Quality Assurance",
+              "list": "QA Packs",
+              "id": "@items('Apply_to_each')['ID']",
+              "MergedData": "@items('Apply_to_each')['LocalData'] + @items('Apply_to_each')['ServerData']"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

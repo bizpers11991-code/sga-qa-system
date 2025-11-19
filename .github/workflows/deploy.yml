@@ -1,0 +1,178 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'm365-deployment/azure-functions/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd m365-deployment/azure-functions
+        npm ci
+
+    - name: Run linter
+      run: |
+        cd m365-deployment/azure-functions
+        npm run lint
+
+    - name: Run unit tests
+      run: |
+        cd m365-deployment/azure-functions
+        npm test -- --coverage --passWithNoTests
+
+    - name: Run security scan
+      run: |
+        cd m365-deployment/azure-functions
+        npm audit --audit-level=moderate
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./m365-deployment/azure-functions/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build Azure Functions
+      run: |
+        cd m365-deployment/azure-functions
+        npm run build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: azure-functions-build
+        path: m365-deployment/azure-functions/
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: azure-functions-build
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy to Azure Functions (Staging)
+      uses: Azure/functions-action@v1
+      with:
+        app-name: sga-qapack-func-staging
+        slot-name: staging
+        package: .
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE_STAGING }}
+
+    - name: Run smoke tests
+      run: |
+        curl -f https://sga-qapack-func-staging.azurewebsites.net/api/health || exit 1
+
+    - name: Notify Teams (Staging)
+      uses: azure/powershell@v1
+      with:
+        inlineScript: |
+          $body = @{
+            text = "✅ Staging deployment completed successfully. Build: ${{ github.sha }}"
+          } | ConvertTo-Json
+          Invoke-RestMethod -Uri "${{ secrets.TEAMS_WEBHOOK_STAGING }}" -Method Post -Body $body -ContentType "application/json"
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: azure-functions-build
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy to Azure Functions (Production)
+      uses: Azure/functions-action@v1
+      with:
+        app-name: sga-qapack-func-prod
+        slot-name: production
+        package: .
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE_PRODUCTION }}
+
+    - name: Run production smoke tests
+      run: |
+        curl -f https://sga-qapack-func-prod.azurewebsites.net/api/health || exit 1
+
+    - name: Notify Teams (Production)
+      uses: azure/powershell@v1
+      with:
+        inlineScript: |
+          $body = @{
+            text = "🚀 Production deployment completed successfully. Build: ${{ github.sha }}"
+          } | ConvertTo-Json
+          Invoke-RestMethod -Uri "${{ secrets.TEAMS_WEBHOOK_PRODUCTION }}" -Method Post -Body $body -ContentType "application/json"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Run TruffleHog secret scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+    - name: Dependency check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'SGA QA Pack'
+        path: './m365-deployment/azure-functions'
+        format: 'HTML'
+        args: >
+          --enableRetired
+          --enableExperimental
+          --nvdValidForHours 24
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-scan-results
+        path: reports/

@@ -1,0 +1,430 @@
+{
+  "name": "SGA QA Pack Submission Flow",
+  "description": "Automatically sends submitted QA packs to Teams channel and SharePoint library",
+  "version": "1.0.0",
+  "createdBy": "Worker #2 (Grok-code)",
+  "reviewedBy": "Claude Sonnet 4.5",
+  "security": "Template only - placeholder data",
+  "trigger": {
+    "type": "PowerApps",
+    "name": "When QA Pack is submitted",
+    "inputs": {
+      "qaPackId": {
+        "type": "string",
+        "description": "ID of the QA Pack being submitted"
+      }
+    }
+  },
+  "actions": [
+    {
+      "order": 1,
+      "name": "Get_Current_User",
+      "type": "Office365Users.MyProfile",
+      "description": "Get the user who submitted the QA pack",
+      "inputs": {},
+      "outputs": {
+        "userId": "@{body('Get_Current_User')?['Id']}",
+        "userDisplayName": "@{body('Get_Current_User')?['DisplayName']}",
+        "userEmail": "@{body('Get_Current_User')?['Mail']}"
+      }
+    },
+    {
+      "order": 2,
+      "name": "Get_QA_Pack_Details",
+      "type": "Microsoft.Dataverse.GetRow",
+      "description": "Retrieve QA pack details from Dataverse",
+      "inputs": {
+        "entityName": "sga_qapacks",
+        "rowId": "@triggerBody()['qaPackId']",
+        "expandQuery": "sga_jobid($select=sga_jobtitle,sga_location)"
+      },
+      "outputs": {
+        "qaPackTitle": "@{body('Get_QA_Pack_Details')?['sga_title']}",
+        "qaPackStatus": "@{body('Get_QA_Pack_Details')?['sga_status']}",
+        "jobTitle": "@{body('Get_QA_Pack_Details')?['sga_jobid']?['sga_jobtitle']}",
+        "jobLocation": "@{body('Get_QA_Pack_Details')?['sga_jobid']?['sga_location']}",
+        "submittedDate": "@{body('Get_QA_Pack_Details')?['sga_submitteddate']}"
+      }
+    },
+    {
+      "order": 3,
+      "name": "Validate_QA_Pack",
+      "type": "Condition",
+      "description": "Check if QA pack is valid for submission",
+      "expression": {
+        "and": [
+          {
+            "not": {
+              "equals": ["@body('Get_QA_Pack_Details')?['sga_title']", null]
+            }
+          },
+          {
+            "equals": [
+              "@body('Get_QA_Pack_Details')?['sga_status']",
+              "100000001"
+            ]
+          }
+        ]
+      },
+      "actions": {
+        "if_true": "Continue_to_Generate_PDF",
+        "if_false": "Log_Validation_Error"
+      }
+    },
+    {
+      "order": 4,
+      "name": "Generate_PDF",
+      "type": "custom_api_call",
+      "description": "Generate PDF from QA pack data (TODO: Implement HTML to PDF conversion)",
+      "inputs": {
+        "method": "POST",
+        "uri": "https://placeholder-pdf-service.com/generate",
+        "body": {
+          "qaPackId": "@triggerBody()['qaPackId']",
+          "template": "qa-pack-template",
+          "includePhotos": true
+        }
+      },
+      "outputs": {
+        "pdfContent": "@{body('Generate_PDF')?['content']}",
+        "pdfFileName": "QA_Pack_@{body('Get_QA_Pack_Details')?['sga_title']}_@{formatDateTime(utcNow(), 'yyyyMMdd_HHmmss')}.pdf"
+      },
+      "notes": "Claude will implement real PDF generation service"
+    },
+    {
+      "order": 5,
+      "name": "Upload_to_SharePoint",
+      "type": "SharePointOnline.CreateFile",
+      "description": "Save PDF to SharePoint QA Packs library",
+      "inputs": {
+        "site": "https://your-tenant.sharepoint.com/sites/SGA",
+        "folderPath": "/Shared Documents/QA Packs/@{body('Get_QA_Pack_Details')?['sga_jobid']?['sga_jobtitle']}",
+        "fileName": "@outputs('Generate_PDF')?['pdfFileName']",
+        "fileContent": "@outputs('Generate_PDF')?['pdfContent']"
+      },
+      "outputs": {
+        "sharePointUrl": "@{body('Upload_to_SharePoint')?['Path']}"
+      },
+      "runAfter": {
+        "Generate_PDF": ["Succeeded"]
+      }
+    },
+    {
+      "order": 6,
+      "name": "Create_Teams_Adaptive_Card",
+      "type": "Compose",
+      "description": "Build Adaptive Card JSON for Teams notification",
+      "inputs": {
+        "type": "AdaptiveCard",
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "version": "1.4",
+        "body": [
+          {
+            "type": "Container",
+            "style": "emphasis",
+            "items": [
+              {
+                "type": "ColumnSet",
+                "columns": [
+                  {
+                    "type": "Column",
+                    "width": "auto",
+                    "items": [
+                      {
+                        "type": "Image",
+                        "url": "https://via.placeholder.com/40x40/FF6600/FFFFFF?text=QA",
+                        "size": "Small",
+                        "style": "Person"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Column",
+                    "width": "stretch",
+                    "items": [
+                      {
+                        "type": "TextBlock",
+                        "text": "New QA Pack Submitted",
+                        "weight": "Bolder",
+                        "size": "Medium",
+                        "color": "Accent"
+                      },
+                      {
+                        "type": "TextBlock",
+                        "text": "Spray Gravel Australia",
+                        "isSubtle": true,
+                        "spacing": "None"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Job:",
+                "value": "@{body('Get_QA_Pack_Details')?['sga_jobid']?['sga_jobtitle']}"
+              },
+              {
+                "title": "Location:",
+                "value": "@{body('Get_QA_Pack_Details')?['sga_jobid']?['sga_location']}"
+              },
+              {
+                "title": "Submitted By:",
+                "value": "@{outputs('Get_Current_User')?['userDisplayName']}"
+              },
+              {
+                "title": "Submitted Date:",
+                "value": "@{formatDateTime(body('Get_QA_Pack_Details')?['sga_submitteddate'], 'dd/MM/yyyy HH:mm')}"
+              }
+            ]
+          },
+          {
+            "type": "TextBlock",
+            "text": "QA Pack Details",
+            "weight": "Bolder",
+            "size": "Medium",
+            "separator": true
+          },
+          {
+            "type": "TextBlock",
+            "text": "@{body('Get_QA_Pack_Details')?['sga_title']}",
+            "wrap": true
+          }
+        ],
+        "actions": [
+          {
+            "type": "Action.OpenUrl",
+            "title": "View in SharePoint",
+            "url": "@{outputs('Upload_to_SharePoint')?['sharePointUrl']}"
+          },
+          {
+            "type": "Action.OpenUrl",
+            "title": "Open Power App",
+            "url": "https://apps.powerapps.com/play/your-app-id"
+          }
+        ]
+      },
+      "runAfter": {
+        "Upload_to_SharePoint": ["Succeeded"]
+      }
+    },
+    {
+      "order": 7,
+      "name": "Post_to_Teams_Channel",
+      "type": "MicrosoftTeams.PostAdaptiveCardToChannel",
+      "description": "Post QA pack notification to Teams #qa-submissions channel",
+      "inputs": {
+        "teamId": "YOUR_TEAM_ID",
+        "channelId": "YOUR_CHANNEL_ID",
+        "card": "@outputs('Create_Teams_Adaptive_Card')"
+      },
+      "outputs": {
+        "teamsMessageId": "@{body('Post_to_Teams_Channel')?['id']}"
+      },
+      "runAfter": {
+        "Create_Teams_Adaptive_Card": ["Succeeded"]
+      },
+      "notes": "Claude will update with real team/channel IDs"
+    },
+    {
+      "order": 8,
+      "name": "Update_QA_Pack_Status",
+      "type": "Microsoft.Dataverse.UpdateRow",
+      "description": "Update QA pack status to 'Submitted' and add SharePoint URL",
+      "inputs": {
+        "entityName": "sga_qapacks",
+        "rowId": "@triggerBody()['qaPackId']",
+        "item": {
+          "sga_status": "100000002",
+          "sga_sharepointurl": "@{outputs('Upload_to_SharePoint')?['sharePointUrl']}",
+          "sga_teamsmessageid": "@{outputs('Post_to_Teams_Channel')?['teamsMessageId']}",
+          "sga_submitteddate": "@{utcNow()}"
+        }
+      },
+      "runAfter": {
+        "Post_to_Teams_Channel": ["Succeeded"]
+      }
+    },
+    {
+      "order": 9,
+      "name": "Log_Submission_Success",
+      "type": "Microsoft.Dataverse.CreateRow",
+      "description": "Log successful submission to audit logs",
+      "inputs": {
+        "entityName": "sga_auditlogs",
+        "item": {
+          "sga_action": "QA_Pack_Submitted",
+          "sga_userid": "@{outputs('Get_Current_User')?['userId']}",
+          "sga_entityid": "@triggerBody()['qaPackId']",
+          "sga_details": "QA pack submitted successfully. SharePoint: @{outputs('Upload_to_SharePoint')?['sharePointUrl']}, Teams: @{outputs('Post_to_Teams_Channel')?['teamsMessageId']}",
+          "sga_timestamp": "@{utcNow()}"
+        }
+      },
+      "runAfter": {
+        "Update_QA_Pack_Status": ["Succeeded"]
+      }
+    },
+    {
+      "order": 10,
+      "name": "Return_Success_to_PowerApp",
+      "type": "Response",
+      "description": "Return success response to Power Apps",
+      "inputs": {
+        "statusCode": 200,
+        "body": {
+          "success": true,
+          "message": "QA pack submitted successfully",
+          "sharePointUrl": "@{outputs('Upload_to_SharePoint')?['sharePointUrl']}",
+          "teamsChannelPosted": true
+        }
+      },
+      "runAfter": {
+        "Log_Submission_Success": ["Succeeded"]
+      }
+    }
+  ],
+  "errorHandling": [
+    {
+      "name": "Log_Validation_Error",
+      "type": "Microsoft.Dataverse.CreateRow",
+      "description": "Log validation error if QA pack is invalid",
+      "inputs": {
+        "entityName": "sga_errorlogs",
+        "item": {
+          "sga_errortype": "Validation_Error",
+          "sga_errormessage": "QA pack validation failed. Status: @{body('Get_QA_Pack_Details')?['sga_status']}, Title: @{body('Get_QA_Pack_Details')?['sga_title']}",
+          "sga_userid": "@{outputs('Get_Current_User')?['userId']}",
+          "sga_timestamp": "@{utcNow()}"
+        }
+      }
+    },
+    {
+      "name": "Handle_PDF_Generation_Failure",
+      "type": "Scope",
+      "runAfter": {
+        "Generate_PDF": ["Failed", "TimedOut"]
+      },
+      "actions": [
+        {
+          "name": "Log_PDF_Error",
+          "type": "Microsoft.Dataverse.CreateRow",
+          "inputs": {
+            "entityName": "sga_errorlogs",
+            "item": {
+              "sga_errortype": "PDF_Generation_Error",
+              "sga_errormessage": "Failed to generate PDF for QA pack: @{triggerBody()['qaPackId']}",
+              "sga_userid": "@{outputs('Get_Current_User')?['userId']}",
+              "sga_timestamp": "@{utcNow()}"
+            }
+          }
+        },
+        {
+          "name": "Return_PDF_Error_to_PowerApp",
+          "type": "Response",
+          "inputs": {
+            "statusCode": 500,
+            "body": {
+              "success": false,
+              "error": {
+                "code": "PDF_GENERATION_FAILED",
+                "message": "Failed to generate PDF. Please try again or contact IT support."
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Handle_SharePoint_Upload_Failure",
+      "type": "Scope",
+      "runAfter": {
+        "Upload_to_SharePoint": ["Failed", "TimedOut"]
+      },
+      "actions": [
+        {
+          "name": "Log_SharePoint_Error",
+          "type": "Microsoft.Dataverse.CreateRow",
+          "inputs": {
+            "entityName": "sga_errorlogs",
+            "item": {
+              "sga_errortype": "SharePoint_Upload_Error",
+              "sga_errormessage": "Failed to upload QA pack to SharePoint: @{triggerBody()['qaPackId']}",
+              "sga_userid": "@{outputs('Get_Current_User')?['userId']}",
+              "sga_timestamp": "@{utcNow()}"
+            }
+          }
+        },
+        {
+          "name": "Return_SharePoint_Error_to_PowerApp",
+          "type": "Response",
+          "inputs": {
+            "statusCode": 500,
+            "body": {
+              "success": false,
+              "error": {
+                "code": "SHAREPOINT_UPLOAD_FAILED",
+                "message": "Failed to save to SharePoint. QA pack saved locally, please contact IT support."
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Handle_Teams_Posting_Failure",
+      "type": "Scope",
+      "runAfter": {
+        "Post_to_Teams_Channel": ["Failed", "TimedOut"]
+      },
+      "actions": [
+        {
+          "name": "Log_Teams_Error",
+          "type": "Microsoft.Dataverse.CreateRow",
+          "inputs": {
+            "entityName": "sga_errorlogs",
+            "item": {
+              "sga_errortype": "Teams_Notification_Error",
+              "sga_errormessage": "Failed to post QA pack to Teams channel: @{triggerBody()['qaPackId']}",
+              "sga_userid": "@{outputs('Get_Current_User')?['userId']}",
+              "sga_timestamp": "@{utcNow()}"
+            }
+          }
+        },
+        {
+          "name": "Continue_Despite_Teams_Failure",
+          "type": "Compose",
+          "inputs": {
+            "note": "Teams notification failed, but QA pack was saved to SharePoint successfully. Continue flow."
+          }
+        }
+      ],
+      "notes": "Teams failure is non-critical - QA pack should still be marked as submitted"
+    }
+  ],
+  "settings": {
+    "timeout": "PT10M",
+    "concurrency": {
+      "runs": 10
+    },
+    "retryPolicy": {
+      "type": "exponential",
+      "count": 3,
+      "interval": "PT10S"
+    }
+  },
+  "notes": {
+    "deployment": "Import this JSON into Power Automate after updating placeholders",
+    "placeholders": [
+      "YOUR_TEAM_ID - Get from Teams admin center",
+      "YOUR_CHANNEL_ID - Get from Teams channel settings",
+      "SharePoint site URL - Update with your tenant URL",
+      "Power App ID - Update with deployed app ID"
+    ],
+    "testing": "Test with a draft QA pack before deploying to production",
+    "monitoring": "Check sga_errorlogs table for any issues"
+  }
+}

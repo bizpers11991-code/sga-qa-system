@@ -1,0 +1,372 @@
+{
+  "name": "Chatbot Flow",
+  "description": "AI-powered chatbot for construction foremen - handles chat requests from Power Apps and returns AI responses",
+  "trigger": {
+    "type": "PowerApps",
+    "kind": "Button",
+    "inputs": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "User's chat message",
+            "x-ms-powerApps-param-isInput": true,
+            "x-ms-powerApps-param-isOutput": false
+          },
+          "conversationHistory": {
+            "type": "string",
+            "description": "JSON string of conversation history",
+            "x-ms-powerApps-param-isInput": true,
+            "x-ms-powerApps-param-isOutput": false
+          },
+          "userId": {
+            "type": "string",
+            "description": "User email address",
+            "x-ms-powerApps-param-isInput": true,
+            "x-ms-powerApps-param-isOutput": false
+          }
+        },
+        "required": ["message", "userId"]
+      }
+    }
+  },
+  "actions": [
+    {
+      "name": "Initialize_response_variable",
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "aiResponse",
+            "type": "String",
+            "value": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "Initialize_error_variable",
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "errorOccurred",
+            "type": "Boolean",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "Get_current_user",
+      "type": "Office365Users.MyProfile",
+      "inputs": {}
+    },
+    {
+      "name": "Validate_user_input",
+      "type": "Condition",
+      "expression": {
+        "and": [
+          {
+            "not": {
+              "equals": [
+                "@triggerBody()['message']",
+                ""
+              ]
+            }
+          },
+          {
+            "not": {
+              "equals": [
+                "@triggerBody()['userId']",
+                ""
+              ]
+            }
+          },
+          {
+            "lessOrEquals": [
+              "@length(triggerBody()['message'])",
+              2000
+            ]
+          }
+        ]
+      },
+      "actions": {
+        "yes": [
+          {
+            "name": "Parse_conversation_history",
+            "type": "ParseJson",
+            "inputs": {
+              "content": "@if(empty(triggerBody()['conversationHistory']), '[]', triggerBody()['conversationHistory'])",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "runAfter": {},
+            "runtimeConfiguration": {
+              "secureData": {
+                "properties": []
+              }
+            }
+          },
+          {
+            "name": "Call_Azure_Function_AIChat",
+            "type": "HTTP",
+            "inputs": {
+              "method": "POST",
+              "uri": "@{parameters('AzureFunctionURL')}/api/AIChat",
+              "headers": {
+                "Content-Type": "application/json",
+                "x-ms-client-principal": "@{base64(concat('{\"userDetails\":\"', outputs('Get_current_user')?['body/mail'], '\",\"claims\":[{\"typ\":\"email\",\"val\":\"', outputs('Get_current_user')?['body/mail'], '\"},{\"typ\":\"name\",\"val\":\"', outputs('Get_current_user')?['body/displayName'], '\"}]}'))}"
+              },
+              "body": {
+                "message": "@triggerBody()['message']",
+                "conversationHistory": "@body('Parse_conversation_history')",
+                "userId": "@triggerBody()['userId']"
+              },
+              "authentication": {
+                "type": "ManagedServiceIdentity"
+              }
+            },
+            "runAfter": {
+              "Parse_conversation_history": [
+                "Succeeded"
+              ]
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 2,
+              "interval": "PT5S",
+              "maximumInterval": "PT30S",
+              "minimumInterval": "PT3S"
+            },
+            "runtimeConfiguration": {
+              "secureData": {
+                "properties": [
+                  "inputs",
+                  "outputs"
+                ]
+              }
+            }
+          },
+          {
+            "name": "Parse_AI_response",
+            "type": "ParseJson",
+            "inputs": {
+              "content": "@body('Call_Azure_Function_AIChat')",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "response": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "tokensUsed": {
+                        "type": "integer"
+                      },
+                      "duration": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "runAfter": {
+              "Call_Azure_Function_AIChat": [
+                "Succeeded"
+              ]
+            }
+          },
+          {
+            "name": "Set_AI_response",
+            "type": "SetVariable",
+            "inputs": {
+              "name": "aiResponse",
+              "value": "@body('Parse_AI_response')?['response']"
+            },
+            "runAfter": {
+              "Parse_AI_response": [
+                "Succeeded"
+              ]
+            }
+          },
+          {
+            "name": "Log_chat_interaction",
+            "type": "Dataverse.CreateRecord",
+            "inputs": {
+              "entityName": "sga_chatinteractions",
+              "item": {
+                "sga_userid": "@triggerBody()['userId']",
+                "sga_usermessage": "@triggerBody()['message']",
+                "sga_airesponse": "@variables('aiResponse')",
+                "sga_timestamp": "@utcNow()",
+                "sga_tokensused": "@body('Parse_AI_response')?['metadata/tokensUsed']",
+                "sga_responsetime": "@body('Parse_AI_response')?['metadata/duration']"
+              }
+            },
+            "runAfter": {
+              "Set_AI_response": [
+                "Succeeded"
+              ]
+            },
+            "runtimeConfiguration": {
+              "secureData": {
+                "properties": [
+                  "inputs",
+                  "outputs"
+                ]
+              }
+            }
+          }
+        ],
+        "no": [
+          {
+            "name": "Set_validation_error",
+            "type": "SetVariable",
+            "inputs": {
+              "name": "aiResponse",
+              "value": "Invalid input. Please ensure your message is not empty and under 2000 characters."
+            },
+            "runAfter": {}
+          },
+          {
+            "name": "Set_error_flag",
+            "type": "SetVariable",
+            "inputs": {
+              "name": "errorOccurred",
+              "value": true
+            },
+            "runAfter": {
+              "Set_validation_error": [
+                "Succeeded"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Handle_Azure_Function_errors",
+      "type": "Scope",
+      "actions": {
+        "Catch": [
+          {
+            "name": "Set_error_response",
+            "type": "SetVariable",
+            "inputs": {
+              "name": "aiResponse",
+              "value": "I'm sorry, I'm having trouble connecting to my AI service right now. Please try again in a moment. If the problem persists, contact your system administrator."
+            },
+            "runAfter": {}
+          },
+          {
+            "name": "Log_error_to_Dataverse",
+            "type": "Dataverse.CreateRecord",
+            "inputs": {
+              "entityName": "sga_errorlogs",
+              "item": {
+                "sga_source": "ChatbotFlow",
+                "sga_errormessage": "@{body('Call_Azure_Function_AIChat')}",
+                "sga_userid": "@triggerBody()['userId']",
+                "sga_timestamp": "@utcNow()",
+                "sga_severity": "Error"
+              }
+            },
+            "runAfter": {
+              "Set_error_response": [
+                "Succeeded"
+              ]
+            }
+          }
+        ]
+      },
+      "runAfter": {
+        "Validate_user_input": [
+          "Failed",
+          "TimedOut"
+        ]
+      }
+    },
+    {
+      "name": "Return_to_Power_Apps",
+      "type": "Response",
+      "kind": "PowerApp",
+      "inputs": {
+        "statusCode": 200,
+        "body": {
+          "response": "@variables('aiResponse')",
+          "timestamp": "@utcNow()",
+          "error": "@variables('errorOccurred')"
+        },
+        "schema": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "string",
+              "description": "AI chatbot response",
+              "x-ms-powerApps-param-isInput": false,
+              "x-ms-powerApps-param-isOutput": true
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "Response timestamp",
+              "x-ms-powerApps-param-isInput": false,
+              "x-ms-powerApps-param-isOutput": true
+            },
+            "error": {
+              "type": "boolean",
+              "description": "Whether an error occurred",
+              "x-ms-powerApps-param-isInput": false,
+              "x-ms-powerApps-param-isOutput": true
+            }
+          }
+        }
+      },
+      "runAfter": {
+        "Validate_user_input": [
+          "Succeeded",
+          "Failed"
+        ],
+        "Handle_Azure_Function_errors": [
+          "Succeeded",
+          "Skipped"
+        ]
+      }
+    }
+  ],
+  "parameters": {
+    "AzureFunctionURL": {
+      "type": "String",
+      "metadata": {
+        "description": "Azure Function App URL (e.g., https://sga-qa-functions.azurewebsites.net)"
+      }
+    }
+  },
+  "metadata": {
+    "comments": "This flow connects Power Apps to the AI chatbot Azure Function. It handles user authentication, request validation, error handling, and logging. The flow uses Managed Service Identity for secure Azure Function authentication.",
+    "version": "1.0.0",
+    "author": "SGA Development Team",
+    "lastModified": "2025-11-16"
+  }
+}

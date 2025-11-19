@@ -1,0 +1,25 @@
+{
+  "name": "CustomConnectorFlow",
+  "description": "Custom connector for IoT API integration",
+  "triggers": [
+    {
+      "type": "HTTP",
+      "parameters": {
+        "method": "POST",
+        "relativePath": "/iot-data"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "Process IoT Data",
+      "type": "Update item",
+      "parameters": {
+        "site": "SGA Quality Assurance",
+        "list": "Equipment",
+        "id": "@triggerBody()['EquipmentID']",
+        "SensorData": "@triggerBody()['Data']"
+      }
+    }
+  ]
+}

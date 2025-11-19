@@ -1,0 +1,82 @@
+DailyReportForm As form:
+    DataSource: ='Daily Reports'
+    Item: =LookUp('Daily Reports', QAPack.Value = varSelectedQAPack.ReportID)
+    X: =0
+    Y: =0
+    Width: =640
+    Height: =1800
+
+    # Enhanced form fields with IoT integration
+    StartTimeInput As textInput:
+        Default: =Text(Now(), "[$-en-US]hh:mm")
+        X: =20
+        Y: =20
+        Width: =300
+        Height: =50
+        HintText: ="Start Time"
+
+    FinishTimeInput As textInput:
+        Default: =Text(Now(), "[$-en-US]hh:mm")
+        X: =340
+        Y: =20
+        Width: =300
+        Height: =50
+        HintText: ="Finish Time"
+
+    # IoT: Auto-populate from Oasure 2 PRO
+    AirTempInput As textInput:
+        Default: =varSensorData.Value
+        X: =20
+        Y: =90
+        Width: =200
+        Height: =50
+        HintText: ="Air Temp (°C)"
+
+    RoadTempInput As textInput:
+        X: =240
+        Y: =90
+        Width: =200
+        Height: =50
+        HintText: ="Road Temp (°C)"
+
+    WindSpeedInput As textInput:
+        X: =460
+        Y: =90
+        Width: =160
+        Height: =50
+        HintText: ="Wind Speed"
+
+    # Accessibility: Screen reader friendly
+    AccessibilityLabel As label:
+        Text: ="Weather conditions section"
+        X: =20
+        Y: =160
+        Visible: =false  # For screen readers
+
+    CommentsInput As textInput:
+        X: =20
+        Y: =180
+        Width: =600
+        Height: =100
+        HintText: ="Comments"
+        Mode: =TextMode.MultiLine
+
+    # Gamification: Auto-award points on save with Copilot congratulations
+    SaveButton As button:
+        Text: ="Save Draft"
+        X: =220
+        Y: =1700
+        Width: =200
+        Height: =60
+        OnSelect: |-
+            =IfError(
+                SubmitForm(Self);
+                // Validation: Ensure required fields
+                If(IsBlank(StartTimeInput.Text), Notify("Start time required", NotificationType.Error), 
+                    Patch(UserGamification, LookUp(UserGamification, UserID = User().Email), {Points: Points + 5});
+                    If(varGuidedMode, Set(varCopilotTip, PowerAutomate.Run("CopilotTip", {Action: "Saved draft"})));
+                    Notify("Draft saved +5 points! " & varCopilotTip, NotificationType.Success);
+                    // Logging for reliability
+                    Patch(AppLogs, Defaults(AppLogs), {User: User().Email, Action: "Draft Saved", QAPackID: varSelectedQAPack.ID, Timestamp: Now()});
+                );
+            , Notify("Save failed", NotificationType.Error))

@@ -1,0 +1,65 @@
+# Build outputs
+dist/
+build/
+dist-ssr/
+*.pyc
+__pycache__/
+
+# Environment files (ALL variations)
+.env
+.env.local
+.env.*.local
+.env.azure
+.env.production
+.env.development
+.env.test
+*.env
+
+# Nano editor temp files
+.*.swp
+.*.swo
+*~
+.save
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# AI Team workspace (outputs only, keep structure)
+ai-team-workspace/outputs/*
+ai-team-workspace/logs/*
+!ai-team-workspace/outputs/.gitkeep
+!ai-team-workspace/logs/.gitkeep
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Archive (don't commit old files)
+archive/

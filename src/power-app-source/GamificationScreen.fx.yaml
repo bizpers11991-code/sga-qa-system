@@ -1,0 +1,55 @@
+GamificationScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    TitleLabel As label:
+        Text: ="Leaderboard & Achievements"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    LeaderboardGallery As gallery.verticalGallery:
+        Items: =SortByColumns(Filter(UserGamification, Division = User().Division), Points, Descending)
+        X: =20
+        Y: =100
+        Width: =600
+        Height: =800
+        TemplateSize: =80
+
+        RankLabel As label:
+            Text: =ThisItem.Rank
+            X: =10
+            Y: =10
+            Size: =20
+            FontWeight: =FontWeight.Bold
+
+        NameLabel As label:
+            Text: =ThisItem.Name
+            X: =60
+            Y: =10
+            Size: =18
+
+        PointsLabel As label:
+            Text: =ThisItem.Points & " pts"
+            X: =400
+            Y: =10
+            Size: =16
+
+    BackButton As button:
+        Text: ="Back to Dashboard"
+        X: =200
+        Y: =950
+        Width: =240
+        Height: =60
+        OnSelect: =Navigate(DashboardScreen)

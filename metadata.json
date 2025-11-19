@@ -1,0 +1,9 @@
+{
+  "name": "SGA QA Pack",
+  "description": "A comprehensive Quality Assurance web application for construction foremen to fill out multi-part daily reports, including Asphalt Placement, Straight Edge Testing, and ITP checklists. Features biometric verification and automated PDF submissions.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

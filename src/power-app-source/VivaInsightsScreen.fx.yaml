@@ -1,0 +1,44 @@
+VivaInsightsScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    HeaderLabel As label:
+        Text: ="Productivity Insights"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    InsightsGallery As gallery.verticalGallery:
+        Items: =VivaInsightsData
+        X: =20
+        Y: =100
+        Width: =600
+        Height: =800
+        TemplateSize: =100
+
+        InsightLabel As label:
+            Text: =ThisItem.Insight
+            X: =10
+            Y: =10
+            Width: =580
+            Height: =80
+            Size: =14
+
+    BackButton As button:
+        Text: ="Back"
+        X: =200
+        Y: =950
+        Width: =240
+        Height: =60
+        OnSelect: =Navigate(SettingsScreen)

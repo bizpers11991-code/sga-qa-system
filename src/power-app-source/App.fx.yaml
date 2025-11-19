@@ -1,0 +1,49 @@
+App:
+    Theme: |-
+        ={
+            "palette": {
+                "primary": "#FF6600",  // SGA Orange
+                "secondary": "#FFFFFF",  // White
+                "accent": "#FF8533",  // Light Orange
+                "background": "#F8F8F8",  // Light Gray-White
+                "text": "#333333"  // Dark Gray
+            },
+            "typography": {
+                "fontFamily": "Segoe UI, sans-serif",
+                "fontSize": 14
+            }
+        }
+    OnStart: |-
+        =// Secure and reliable initialization with error handling
+        IfError(
+            // Initialize security data first
+            Set(AllowedUsers, ["user1@sga.com.au", "user2@sga.com.au", "admin@sga.com.au"]); // Load from data source in production
+
+            // Performance: Move all independent operations to Concurrent
+            Concurrent(
+                LoadData(LocalJobs, "LocalJobs", true),
+                LoadData(LocalQAPacks, "LocalQAPacks", true),
+                LoadData(LocalIncidents, "LocalIncidents", true),
+                // Initialize gamification data with validation
+                Set(varUserPoints, Coalesce(LookUp(UserGamification, UserID = User().Email, Points), 0)),
+                // Enable accessibility features
+                Set(varLanguage, Language()),
+                // Initialize IoT connections securely (no sensitive data exposed)
+                Set(varGPSLocation, Location.Position),
+                // Load AI risk models (placeholder for Azure OpenAI integration)
+                Set(varAIRiskEnabled, true),
+                // Guided mode and personalization
+                Set(varGuidedMode, false),
+                Set(varCopilotOfflineCache, Blank()),
+                Set(varCopilotReady, true)
+            );
+
+            // Security: Validate user permissions (after AllowedUsers is initialized)
+            If(Not(User().Email in AllowedUsers), Navigate(LoginScreen), Notify("Access denied", NotificationType.Error));
+
+            // Logging: Record app start
+            Patch(AppLogs, Defaults(AppLogs), {User: User().Email, Action: "App Started", Timestamp: Now()});
+        , Notify("App initialization error", NotificationType.Error));
+
+    Logo: |-
+        ="Safety-grooving-australia-logo-4 (1).png"

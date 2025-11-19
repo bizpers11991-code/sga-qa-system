@@ -1,0 +1,78 @@
+SettingsScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    HeaderLabel As label:
+        Text: ="Settings"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    LanguageDropdown As dropdown:
+        X: =20
+        Y: =100
+        Width: =300
+        Height: =50
+        Items: =["English", "Spanish", "French"]
+        Default: =varLanguage
+        OnChange: =Set(varLanguage, Self.SelectedText)
+
+    AccessibilityToggle As toggle:
+        Text: ="High Contrast Mode"
+        X: =20
+        Y: =170
+        Width: =200
+        Height: =50
+
+    CopilotPreferences As dropdown:
+        X: =20
+        Y: =240
+        Width: =300
+        Height: =50
+        Items: =["Detailed Responses", "Quick Summaries", "Predictive Suggestions"]
+        HintText: ="Copilot Style"
+
+    # Security: Conditional Access Settings
+    ConditionalAccessToggle As toggle:
+        Text: ="Enable Conditional Access"
+        X: =20
+        Y: =310
+        Width: =250
+        Height: =50
+
+    # Integration Depth: OneDrive Sync
+    OneDriveSyncButton As button:
+        Text: ="Sync to OneDrive"
+        X: =20
+        Y: =380
+        Width: =200
+        Height: =50
+        OnSelect: =OneDrive.SaveFile("QA Pack Backup", JSON(varSelectedQAPack))
+
+    # Viva Insights: Productivity Tracking
+    VivaInsightsButton As button:
+        Text: ="View Productivity Insights"
+        X: =240
+        Y: =380
+        Width: =200
+        Height: =50
+        OnSelect: =Navigate(VivaInsightsScreen)
+
+    SaveButton As button:
+        Text: ="Save Settings"
+        X: =120
+        Y: =950
+        Width: =400
+        Height: =70
+        OnSelect: =Notify("Settings saved!", NotificationType.Success); Navigate(DashboardScreen)

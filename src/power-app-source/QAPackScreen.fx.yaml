@@ -1,0 +1,221 @@
+QAPackScreen As screen:
+    Fill: =RGBA(248, 248, 248, 1)  // Light white-gray background
+
+    HeaderLabel As label:
+        Text: ="QA Pack"
+        X: =0
+        Y: =0
+        Width: =640
+        Height: =80
+        Size: =24
+        Align: =Align.Center
+        Fill: =RGBA(255, 102, 0, 1)  // SGA Orange
+        Color: =RGBA(255, 255, 255, 1)  // White text
+
+    LogoImage As image:
+        Image: =App.Logo
+        X: =20
+        Y: =10
+        Width: =60
+        Height: =30
+
+    # Accessibility & Inclusivity: Voice-to-Text Button with Copilot
+    VoiceToTextButton As button:
+        Text: ="🎤 Voice Notes"
+        X: =500
+        Y: =10
+        Width: =120
+        Height: =60
+        OnSelect: |-
+            =// Pre-flight checks for speech recognition
+            If(Not(Speech.IsAvailable()),
+                Notify("Speech recognition not available on this device", NotificationType.Warning),
+            If(Not(Speech.HasPermission()),
+                Notify("Microphone permission required for voice input", NotificationType.Warning),
+            // Proceed with speech recognition
+            IfError(
+                Set(varVoiceInput, Speech.Recognize("Describe the issue or notes"));
+                UpdateContext({showVoiceModal: true});
+                // Security: Log voice input for audit
+                Patch(AppLogs, Defaults(AppLogs), {User: User().Email, Action: "Voice Input Used", Timestamp: Now()});
+            ,
+                // Enhanced error handling
+                Notify("Voice recognition failed: " & FirstError.Message, NotificationType.Error);
+                Trace("Speech recognition error", TraceSeverity.Error, {Error: FirstError})
+            )))
+
+    # Guided Mode Indicator
+    GuidedIndicator As label:
+        Text: =If(varGuidedMode, "Guided Mode: Follow Copilot tips", "")
+        X: =20
+        Y: =140
+        Width: =600
+        Height: =30
+        Size: =14
+        Color: =RGBA(0, 128, 0, 1)
+        Visible: =varGuidedMode
+
+    # Workflow Automation: Approval Chain
+    ApprovalButton As button:
+        Text: ="Request Approval"
+        X: =20
+        Y: =180
+        Width: =150
+        Height: =50
+        OnSelect: =PowerAutomate.Run("StartApprovalFlow", {QAPackID: varSelectedQAPack.ID})
+
+    # AI Enhancements: Predictive Maintenance
+    PredictiveAlert As label:
+        Text: ="Copilot Alert: Equipment X needs service based on usage."
+        X: =200
+        Y: =180
+        Width: =400
+        Height: =50
+        Size: =14
+        Color: =RGBA(255, 0, 0, 1)
+        Visible: =!IsBlank(LookUp(PredictiveAlerts, JobID = selectedJob.ID, Alert))
+
+    # Tab Buttons
+    ButtonDailyReportTab As button:
+        Text: ="Daily Report"
+        X: =0
+        Y: =80
+        Width: =128
+        Height: =50
+        OnSelect: =UpdateContext({currentTab: "DailyReport"})
+
+    ButtonAsphaltTab As button:
+        Text: ="Asphalt"
+        X: =128
+        Y: =80
+        Width: =128
+        Height: =50
+        OnSelect: =UpdateContext({currentTab: "Asphalt"})
+
+    ButtonPhotosTab As button:
+        Text: ="Photos"
+        X: =256
+        Y: =80
+        Width: =128
+        Height: =50
+        OnSelect: =UpdateContext({currentTab: "Photos"})
+
+    ButtonITPTab As button:
+        Text: ="ITP"
+        X: =384
+        Y: =80
+        Width: =128
+        Height: =50
+        OnSelect: =UpdateContext({currentTab: "ITP"})
+
+    ButtonReviewTab As button:
+        Text: ="Review"
+        X: =512
+        Y: =80
+        Width: =128
+        Height: =50
+        OnSelect: =UpdateContext({currentTab: "Review"})
+
+    # Tab Containers
+    DailyReportContainer As groupContainer.manualLayoutContainer:
+        Visible: =currentTab = "DailyReport"
+        X: =0
+        Y: =130
+        Width: =640
+        Height: =1800
+
+        DailyReportForm1 As DailyReportForm
+
+    AsphaltContainer As groupContainer.manualLayoutContainer:
+        Visible: =currentTab = "Asphalt"
+        X: =0
+        Y: =130
+        Width: =640
+        Height: =900
+
+        LabelAsphalt As label:
+            Text: ="Asphalt Placement Content"
+            X: =20
+            Y: =20
+            Size: =20
+
+    PhotosContainer As groupContainer.manualLayoutContainer:
+        Visible: =currentTab = "Photos"
+        X: =0
+        Y: =130
+        Width: =640
+        Height: =900
+
+        LabelPhotos As label:
+            Text: ="Site Photos Content"
+            X: =20
+            Y: =20
+            Size: =20
+
+    ITPContainer As groupContainer.manualLayoutContainer:
+        Visible: =currentTab = "ITP"
+        X: =0
+        Y: =130
+        Width: =640
+        Height: =900
+
+        LabelITP As label:
+            Text: ="ITP Checklist Content"
+            X: =20
+            Y: =20
+            Size: =20
+
+    ReviewContainer As groupContainer.manualLayoutContainer:
+        Visible: =currentTab = "Review"
+        X: =0
+        Y: =130
+        Width: =640
+        Height: =900
+
+        LabelReview As label:
+            Text: ="Review & Submit Content"
+            X: =20
+            Y: =20
+            Size: =20
+
+    # Voice-to-Text Modal
+    VoiceModal As modal:
+        Visible: =showVoiceModal
+        X: =50
+        Y: =300
+        Width: =540
+        Height: =400
+
+        VoiceTitleLabel As label:
+            Text: ="Voice-to-Text Notes"
+            X: =20
+            Y: =20
+            Size: =20
+            FontWeight: =FontWeight.Bold
+
+        VoiceTextLabel As label:
+            Text: =varVoiceInput.Text
+            X: =20
+            Y: =60
+            Width: =500
+            Height: =280
+            Size: =16
+
+        AddToFormButton As button:
+            Text: ="Add to Form"
+            X: =150
+            Y: =350
+            Width: =120
+            Height: =40
+            OnSelect: |-
+                =Patch('Daily Reports', selectedReport, {AdditionalComments: AdditionalComments & " " & varVoiceInput.Text});
+                UpdateContext({showVoiceModal: false});
+                Notify("Notes added", NotificationType.Success)
+
+        CloseVoiceButton As button:
+            Text: ="Close"
+            X: =290
+            Y: =350
+            Width: =100
+            Height: =40
+            OnSelect: =UpdateContext({showVoiceModal: false})
