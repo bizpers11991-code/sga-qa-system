@@ -1,49 +1,33 @@
-import { useMsalAuthentication, useIsAuthenticated, useMsal } from "@azure/msal-react";
-import { InteractionType } from "@azure/msal-browser";
-import { loginRequest } from "../auth/msalConfig";
-import { useEffect } from "react";
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
+import {
+  InteractionStatus
+} from '@azure/msal-browser';
 
-const useAuth = () => {
-    const { login, result, error } = useMsalAuthentication(InteractionType.Redirect, loginRequest);
-    const isAuthenticated = useIsAuthenticated();
-    const { instance, accounts } = useMsal();
+export const useAuth = () => {
+  const { instance, inProgress } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
 
-    useEffect(() => {
-        if (error) {
-            console.error("Authentication error:", error);
-        }
-    }, [error]);
+  const user = instance.getActiveAccount();
 
-    const logout = () => {
-        instance.logoutRedirect({
-            account: accounts[0]
-        });
-    };
+  const login = () => {
+    if (!isAuthenticated && inProgress === InteractionStatus.None) {
+      instance.loginRedirect();
+    }
+  };
 
-    const getAccessToken = async () => {
-        try {
-            const response = await instance.acquireTokenSilent({
-                ...loginRequest,
-                account: accounts[0]
-            });
-            return response.accessToken;
-        } catch (error) {
-            console.error("Token acquisition error:", error);
-            // Fall back to interactive method
-            await instance.acquireTokenRedirect(loginRequest);
-            return null;
-        }
-    };
+  const logout = () => {
+    instance.logoutRedirect();
+  };
 
-    return {
-        isAuthenticated,
-        login,
-        logout,
-        result,
-        error,
-        user: accounts[0],
-        getAccessToken
-    };
+  return {
+    isAuthenticated,
+    user: {
+      name: user?.name,
+      // Add other user properties as needed
+    },
+    login,
+    logout,
+  };
 };
 
 export default useAuth;

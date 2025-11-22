@@ -3,6 +3,7 @@ import { msalInstance } from './auth/msalConfig';
 import Login from './components/Login';
 import useAuth from './hooks/useAuth';
 import AppRouter from './routing/routes';
+import { AppShell } from './components/layout';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -11,7 +12,11 @@ function AppContent() {
     return <Login />;
   }
 
-  return <AppRouter />;
+  return (
+    <AppShell>
+      <AppRouter />
+    </AppShell>
+  );
 }
 
 function App() {

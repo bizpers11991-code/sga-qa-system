@@ -157,8 +157,6 @@ const JobList = () => {
     <PageContainer>
       <PageHeader
         title="Jobs"
-        description="Manage and monitor all jobs"
-        breadcrumbs={[{ label: 'Home', path: '/' }, { label: 'Jobs' }]}
         actions={
           <div className="flex gap-3">
             {filteredJobs.length > 0 && (
@@ -243,8 +241,7 @@ const JobList = () => {
               {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
                   <p className="text-sm text-gray-600">
-                    Showing {startIndex + 1} to {Math.min(endIndex, filteredJobs.length)} of{' '}
-                    {filteredJobs.length} jobs
+                    Page {currentPage} of {totalPages}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -254,21 +251,6 @@ const JobList = () => {
                     >
                       Previous
                     </button>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-touch ${
-                            currentPage === page
-                              ? 'bg-sga-700 text-white'
-                              : 'text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
                     <button
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
