@@ -1,317 +1,324 @@
 <think>
-Okay, I need to create user documentation for the SGA QA System. Let me start by understanding the user's requirements. The user provided four roles: Foremen (field workers using iPads), Engineers (office-based), Schedulers/Admins, and Management. The features to document include logging in with Azure AD, viewing assigned jobs, filling out 11 QA forms, taking photos, submitting reports, viewing a calendar, receiving notifications, and accessing past reports. Additionally, there are special sections like a Quick Start Guide, form field descriptions, mobile vs desktop differences, offline mode, and getting help.
+Okay, I need to create user documentation for the SGA QA System. Let me start by understanding the requirements. The user roles are Foremen (field workers using iPads), Engineers (office-based), Schedulers/Admins, and Management. The features to document include logging in with Azure AD, viewing assigned jobs, filling out QA forms (11 types), taking photos, submitting reports, viewing calendar, notifications, and accessing past reports. Each feature needs purpose, steps with screenshots, tips, and common issues. Plus special sections like Quick Start, form field descriptions, mobile vs desktop, offline mode, and getting help.
 
-First, I need to structure the documentation in Markdown. The user wants clear headings, numbered steps, and visual cues like screenshots. Each feature should have purpose, step-by-step instructions with placeholder screenshots, tips, and common issues.
+First, I'll outline the structure. The main sections would be the introduction explaining the system, then user roles, followed by each feature section as specified. The special sections need their own pages. For each feature, I need to make sure to address all parts. 
 
-Let me start with the Quick Start Guide. Since it's a one-pager, I should list the main steps for each role briefly. For example, logging in, viewing jobs, filling forms, submitting, etc. I'll need to make it concise.
+Starting with the login. For each role, the login process with Azure AD. Step-by-step: open app, tap login, select Azure AD, enter credentials. Tips would be secure password, check email for invites. Common issues: login problems, maybe double-check network or contact helpdesk.
 
-Next, for each feature, I'll need to detail the purpose and when to use it. For each role, maybe there's a different emphasis. For example, Foremen use the mobile app for filling forms and taking photos, while Engineers might focus on reviewing submissions.
+Viewing assigned jobs. Foremen need to see daily tasks. Steps: tap on Jobs, select filters. Tips on using filters. Common issues: no jobs displayed—refresh or check assignments.
 
-Logging in via Azure AD is straightforward, but screenshots would help. I'll include steps for both mobile and desktop, noting differences. Common issues might include login problems, so I should suggest solutions like checking internet or contacting IT.
+Filling out QA forms: there are 11 types. Need a general process here. Steps would be selecting a job, choosing form, filling each field, saving, then submitting. Each form might have unique fields, so maybe a Form Field Descriptions section where each form's details are listed. Wait, the user mentioned a special section for that. So perhaps for the main Features section, just the process of completing a form, then in the Form Field Descriptions, go into detail about each form's fields. Maybe for each form in the features section, it's too much, but since there are 11 forms, that could get lengthy. The user instructions say for each feature, fill out QA forms (all 11 types). So maybe a section that lists all 11 forms and maybe a brief overview of each? But the user wants step-by-step for filling out QA forms in general. So perhaps the steps cover selecting the form, opening it, and then the form-specific steps can be in the field descriptions. That makes sense.
 
-Viewing assigned jobs: explain how each role interacts. Foremen see their jobs on the go, Engineers might assign, Schedulers manage schedules. Steps would involve navigating to the jobs section. Tips could include filtering or sorting.
+Taking photos: steps include opening the form, navigating to photo field, taking or uploading photo, saving. Tips about clear lighting, showing context, tagging. Issues: poor quality, storage space.
 
-Filling out QA forms needs descriptions for all 11 types. Maybe a reference section for form fields is needed. For each form, the fields can be described in a separate section. Common issues might be missing fields or submission errors.
+Submitting reports: steps after completing forms, review, submit. Engineer’s approval might be part of this. Maybe a section on how each role interacts—foremen submit, engineers review, etc.
 
-Taking photos involves using the camera within the app. Steps would be accessing the camera, taking photos, uploading. Tips on good lighting, clear shots. Common issues with photos not uploading could relate to storage or connectivity.
+Viewing calendar: steps to check upcoming jobs, how to navigate dates, maybe add to calendar. Tips on planning.
 
-Submitting reports: process steps, confirmation, notifications. Tips on reviewing before submission. Issues include incomplete data or failed submissions.
+Notifications: push on mobile, email for desktop. How to manage notifications, don’t miss alerts.
 
-Calendar viewing for schedules and deadlines. Engineers and Schedulers might have more administrative access here.
+Accessing past reports: search by date, job, or status. Steps for filtering and exporting.
 
-Notifications: how users receive alerts, settings maybe for different roles. Common issues like not receiving notifications, solutions involve checking device settings or app permissions.
+Special sections: Quick Start Guide is a single page with the most important steps for each role. Form Field Descriptions would list all 11 forms and their fields. Mobile vs Desktop differences—like touch vs mouse, offline mode. Offline mode is important for field workers, so how to use without internet. Getting help: contact info, knowledge base, etc.
 
-Accessing past reports: search, filter, download. Management might need historical data for reports.
+Now, for the Quick Start Guide, it should be concise, maybe bullet points for each role's top tasks. For example, Foremen: login, view jobs, fill forms, take photos, submit. Engineers: review submissions, generate reports. Admins: assign jobs, set schedules. Management: check dashboards, exports.
 
-Special sections:
+Form Field Descriptions: each form would have its name, purpose, and fields listed with description and expected value. Since there are 11, maybe a table for each in a separate section.
 
-- Form field descriptions: list each form with key fields and descriptions. Maybe a table for each with Field Name, Description.
+Mobile vs Desktop differences: mobile is optimized for touch, photos directly from camera, maybe less features. Desktop has advanced reporting, bulk actions.
 
-- Mobile vs Desktop differences: navigation, features available, performance. For example, mobile has camera access, and desktop has bulk actions.
+Offline mode: how to enable, work without internet, sync when back online. Foremen frequently use this in field, so important steps here.
 
-- Offline mode: how to enable, syncing when back online. Foremen might use this in areas with poor connectivity. Tips on not making too many changes offline.
+Getting help: links to support, knowledge base, internal contacts.
 
-- Getting help: support contacts, FAQs, feedback.
+Potential pitfalls: making sure that each feature is addressed for all roles where applicable. For example, viewing calendar might be more for Foremen and Schedulers. Accessing past reports might be used more by Engineers and Management. Need to note which roles use each feature as applicable.
 
-I need to make sure the documentation is user-friendly. Each section for a feature should be clear and structured the same way. Use headings, bold for key terms, placeholders for screenshots. Visual cues like icons (maybe in italics for placeholders). 
+Also, for the step-by-step instructions, need to indicate where screenshots would go, with placeholders. Each step in the instructions should have a screenshot description. For example, under login: [Screenshot: Login screen with Azure AD option highlighted].
 
-Potential mistakes to avoid: missing a feature, not differentiating between roles in their features, not providing enough practical examples for common issues. Also, ensuring that the 11 QA forms are covered without making the documentation too lengthy. Maybe a separate section listing all 11 forms and their typical use cases without going into detail in the main sections.
+I need to make sure that the Markdown is properly formatted, with clear headings using #, ##, ### as appropriate. Each feature has its own heading, with sub-sections Purpose, Step-by-Step, Tips, etc.
 
-Also, consider the user roles. For example, the Schedulers/Admins may have access to different parts than Foremen, so in each feature explanation, specify which role would use it how. Unless the feature is common to all.
+Now, considering the different user roles, maybe in each feature section mention which roles use it. For example, Submitting reports is done by Foremen, reviewed by Engineers.
 
-Now, organize the Markdown structure. Start with the overview, then the Quick Start. Then each feature with headings, followed by the special sections.
+I should also check if any features have different workflows per role. For example, engineers might have a different process for viewing past reports than management.
 
-Need to check if all 11 forms are to be listed with their fields. Maybe in a separate section, under Form Field Descriptions. The user mentioned it as a special section.
+Let me outline each section as per the user's request and make sure nothing is missed. Also, ensure that the common issues are relevant for each role. For example, offline mode is important for Foremen, so common issue might be not syncing, so solutions would involve checking connection or storage.
 
-Also, offline mode is important for field workers. I need to explain enabling it, using it, and syncing.
+Another thing: since there are 11 QA forms, each with field descriptions, maybe in the Form Field Descriptions section have a table for each form, including the name, purpose, and fields. But that might be too lengthy. Alternatively, a list with each form, a brief description, and the key fields. The user might need to know what each form is for.
 
-For the documentation flow, the user likely expects:
+Putting it all together, the documentation should be structured to allow users to navigate easily, find their role, go to the relevant feature sections, check quick start guides, and access forms details when needed. The form field descriptions need to be thorough but concise.
 
-1. Introduction
-2. Quick Start Guide
-3. Full Features Documentation
-4. Special Sections
-5. Support
-
-Make sure the navigation is clear with markdown headers.
-
-I need to avoid technical jargon, keep it simple for field workers. Use step-by-step instructions with clear numbers and actions.
-
-Now, start drafting each section.
-
-First, the title and overview. Then the quick start guide as a one-page summary.
-
-Then each feature, starting with login. Then assigned jobs, QA forms, photos, submitting reports, etc.
-
-Each feature section will have Purpose, Step-by-Step, Tips, Common Issues.
-
-In the form filling section, since there are 11 types, maybe in the step-by-step, mention that the process is similar but fields vary, then refer to the form descriptions section.
-
-For the form field descriptions, perhaps list each form type with a brief description and key fields. Maybe use a collapsed section or a separate document within the markdown.
-
-Mobile vs desktop differences: compare features available on each platform.
-
-Need to make sure each part is covered without redundancy. For example, in the QA forms section, maybe just outline the general process, then refer to the form descriptions for specifics.
-
-For the Quick Start Guide, a table or bullet points for each role's key actions.
-
-Potential challenges: keeping all the content concise while covering enough detail. Since it's user documentation, clarity is key. Avoid overlapping information.
-
-Now, proceed to outline each section in markdown, using placeholders for screenshots and form field descriptions as specified.
+Now, actual writing in Markdown. Need to make sure sections are broken down logically. Use headings, bold text for key terms, numbered lists for steps, bullet points for tips. Screenshots are placeholders, so describe what they show.
 </think>
 
-# SGA QA System User Documentation  
+# SGA QA System User Documentation
 
 ---
 
-## **Overview**  
-The SGA QA System enables teams to complete quality assurance workflows, track progress, and ensure compliance. Roles include **Foremen** (field workers), **Engineers** (office-based), **Schedulers/Admins**, and **Management**.  
+## Table of Contents
+- [User Roles](#user-roles)
+- [Logging In](#logging-in)
+- [Viewing Assigned Jobs](#viewing-assigned-jobs)
+- [Filling Out QA Forms](#filling-out-qa-forms)
+- [Taking Photos](#taking-photos)
+- [Submitting Reports](#submitting-reports)
+- [Viewing Calendar](#viewing-calendar)
+- [Receiving Notifications](#receiving-notifications)
+- [Accessing Past Reports](#accessing-past-reports)
+- [Offline Mode](#offline-mode)
+- [Special Sections](#special-sections)
 
 ---
 
-## **Quick Start Guide (1-Page Summary)**  
+## User Roles
 
-1. **Log In**  
-   - Open the app or website → Use Azure AD credentials.  
-   [Screenshot: Login screen]  
-
-2. **View Jobs**  
-   - Tap/Desktop: Navigate to "Assigned Jobs".  
-   - Filter by status (e.g., "Pending", "Completed").  
-
-3. **Fill QA Form**  
-   - Select a job → Tap "Start QA Form".  
-   - Choose form type (11 templates available).  
-
-4. **Take Photos**  
-   - Use in-app camera → Capture issues → Tag photos with QA forms.  
-
-5. **Submit Report**  
-   - Review data → Tap "Submit". Confirm via email/SMS.  
-
-6. **Access Past Reports**  
-   - Use "Search Reports" → Filter by date, job number, or team.  
-
-7. **Offline Mode** (Foremen only):  
-   - Enable offline in Settings → Sync when connectivity resumes.  
-
-8. **Get Help**:  
-   - Tap "Help Center" → Email [support@sgaqa.com] or call 1-800-SGA-Help.  
+1. **Foremen** (iPad users in the field)
+   - Focus: Job execution, QA form completion, photo collection.
+2. **Engineers** (Office-based)
+   - Focus: Reviewing submissions, technical analysis.
+3. **Schedulers/Admins**
+   - Focus: Assigning jobs, calendar management.
+4. **Management**
+   - Focus: High-level reporting, performance tracking.
 
 ---
 
-## **Feature Documentation**  
+## Logging In
 
-### **1. Logging in (Azure AD)**  
-**Purpose**: Secure access to the system for all roles.  
-**Steps**:  
-1. Open the SGA QA app or desktop portal.  
-2. Tap “Sign in with Azure AD”.  
-3. Enter your organizational credentials and approve multi-factor authentication (if prompted).  
-[Screenshot: Azure AD login flow]  
+### Purpose
+Secure access via Azure AD to ensure role-specific permissions.
 
-**Tips**:  
-- First-time users: Complete onboarding via email link.  
-- Update passwords through your organization’s portal.  
+### Step-by-Step
+1. Open the SGA QA System app or web portal.
+2. Tap **Login** > Select **Azure AD**.
+3. Enter your work email and password.
+4. Complete multi-factor authentication (if enabled).
 
-**Common Issues**:  
-- **Error: “Login Failed”**  
-  - Check internet connection.  
-  - Reset password via Azure AD portal.  
+[Screenshot: Login screen with Azure AD option highlighted]
 
----
+### Tips
+- Use your corporate email for login.
+- If you’re a Foreman, install the iPad app for field use.
 
-### **2. Viewing Assigned Jobs**  
-**Purpose**: Foremen track active tasks; Engineers/Managers monitor progress.  
-**Steps**:  
-1. Tap/Desktop: Navigate to “Jobs Dashboard”.  
-2. Filter by:  
-  - Due date  
-  - Job status (e.g., “Overdue”, “Pending QA”)  
-  - Assigned team.  
-[Screenshot: Job filtering options]  
-
-**Tips**:  
-- Use the “Sort by Deadline” button for urgent tasks.  
-- Engineers can assign new jobs via the “+ New Job” button.  
-
-**Common Issues**:  
-- **No jobs appear**:  
-  - Verify your team/role is assigned via the Scheduler.  
-  - Refresh the dashboard.  
+### Common Issues
+- **Login failure**: Check internet connectivity or contact IT.
+- **New user?** Wait for admin (Schedulers/Admins) to invite you via Azure AD.
 
 ---
 
-### **3. Filling Out QA Forms**  
-**Purpose**: Standardize quality checks across 11 form types (e.g., concrete pour, weld inspection).  
-**Steps**:  
-1. Select a job → Tap “Start QA Form”.  
-2. Choose form type (e.g., “Form 5a: Material Check”).  
-3. Fill fields:  
-   - Text entries  
-   - Checklists  
-   - Measurements.  
-4. Attach photos (see Section 4).  
-5. Save as draft (optional).  
+## Viewing Assigned Jobs
 
-[Screenshot: QA form example]  
+### Purpose
+Foremen check daily tasks. Engineers/Admins monitor progress.
 
-**Tips**:  
-- Use the “Autofill” feature for repetitive data (e.g., project number).  
-- Consult the **Form Field Descriptions** (Section 9) for unclear fields.  
+### Step-by-Step
+1. Tap the **Jobs** tab.
+2. Filter by **Date** or **Status** (Unstarted/In Progress/Completed).
+3. Tap a job to view details, forms, and due dates.
 
-**Common Issues**:  
-- **Fields are missing**:  
-  - Form type mismatch; restart with the correct template.  
-- **Submission error**:  
-  - Ensure all required fields are filled.  
+[Screenshot: "Jobs" tab with active jobs and filters]
+
+### Tips
+- Use the **Search** bar for job numbers/names.
+- Foremen: Sort by "Due Date" to prioritize tasks.
+
+### Common Issues
+- **No jobs appear**: Refresh the screen or check with Schedulers.
 
 ---
 
-### **4. Taking Photos**  
-**Purpose**: Document on-site conditions for QA reports.  
-**Steps**:  
-1. From a QA form or job detail page → Tap the camera icon.  
-2. Take photo or upload from gallery.  
-3. Add tags (e.g., “Crack in Column B3”).  
-4. Photos sync automatically when online.  
-[Screenshot: Photo tagging interface]  
+## Filling Out QA Forms
 
-**Tips**:  
-- Ensure good lighting and close-up shots for clarity.  
-- Delete low-quality photos before submission.  
+### Purpose
+Capture quality assurance data for 11 standardized job types (e.g., concrete pouring, electrical checks).
 
-**Common Issues**:  
-- **Photos not uploading**:  
-  - Check storage space on your device.  
-  - Disable “Low Data Mode” in app settings.  
+### Step-by-Step
+1. Open a job > Tap **Start QA Form**.
+2. Select the form type (1-11).
+3. Fill fields (text, dropdowns, checkboxes), see [Form Field Descriptions](#form-field-descriptions).
+4. Save periodically to avoid data loss.
 
----
+[Screenshot: QA form example with text field and dropdown]
 
-### **5. Submitting Reports**  
-**Purpose**: Finalize QA data for review by Engineers/Managers.  
-**Steps**:  
-1. Review QA form and attached photos.  
-2. Tap “Submit Report”.  
-3. Confirm submission via on-screen banner and email.  
+### Tips
+- Use the **Voice to Text** option for quick input.
+- Foremen: Finalize forms before submitting for approval.
 
-**Tips**:  
-- Submit reports within 24 hours of on-site work.  
-- Managers receive notifications for overdue submissions.  
-
-**Common Issues**:  
-- **Submission stuck**:  
-  - Toggle offline mode off/on to resync data.  
+### Common Issues
+- **Missing forms?** Check your assigned job type or contact engineers.
 
 ---
 
-### **6. Viewing Calendar**  
-**Purpose**: Schedulers/Admins track deadlines; Foremen see task dates.  
-**Steps**:  
-1. Navigate to “Calendar”.  
-2. Switch between:  
-   - Day view (Foremen)  
-   - Team view (Schedulers)  
-3. Tap events to view job details.  
-[Screenshot: Calendar week view]  
+## Taking Photos
 
-**Tips**:  
-- Engineers can edit deadlines directly from the calendar.  
+### Purpose
+Document work conditions and QA results.
 
----
+### Step-by-Step
+1. In a QA form, tap the **Camera/Photo** icon.
+2. Take a new photo or select an existing one from your device.
+3. Add a caption (e.g., "Pipe alignment at junction A").
+4. Tap **Save** to attach to the form.
 
-### **7. Receiving Notifications**  
-**Purpose**: Stay updated on form due dates, approvals, and errors.  
-**Steps**:  
-- **Mobile**: Enable Push Notifications in Settings.  
-- **Desktop**: Check the bell icon for alerts.  
-[Screenshot: Notification center]  
+[Screenshot: Photo capture screen with caption field]
 
-**Tips**:  
-- Assign notification preferences under “User Profile > Notifications”.  
+### Tips
+- Ensure good lighting and include reference markers (e.g., tags).
+- Foremen: Photos sync when online; store 200 images max offline (iPad).
 
-**Common Issues**:  
-- **Missing notifications**:  
-  - Check device permissions in Settings > Notifications.  
+### Common Issues
+- **Low-quality images**: Retake in brighter light.
+- **Storage issues?** Delete outdated photos in **Settings**.
 
 ---
 
-### **8. Accessing Past Reports**  
-**Purpose**: Management/Engineers review historical data for audits.  
-**Steps**:  
-1. Navigate to “Search Reports”.  
-2. Filter by:  
-   - Date range  
-   - Job number  
-   - Team member  
-3. Export as PDF/Excel.  
-[Screenshot: Report search filters]  
+## Submitting Reports
 
-**Tips**:  
-- Use Excel exports for custom dashboards.  
+### Purpose
+Foremen notify oversight teams of job status. Engineers/Admins review/validate.
 
----
+### Step-by-Step
+1. Complete all QA forms for a job.
+2. Tap **Review** and verify entries.
+3. Tap **Submit Report** > Confirm.
+4. Engineers receive a notification for review.
 
-## **Special Sections**  
+[Screenshot: "Submit Report" button highlighted]
 
-### **9. Form Field Descriptions**  
-| **Form Type** | **Key Fields** |  
-|---------------|----------------|  
-| **Form 1: Prep Check** | Material ID, Prep Method, Inspector Name |  
-| **Form 5a: Concrete Pour** | Mix ID, Slump Reading, Cure Time |  
-| **...** | **...** |  
+### Tips
+- Submit early for quicker feedback from engineers.
+- Engineers: Reject incomplete reports with clear comments.
 
-Full list via “Help Center > QA Form Library”.  
+### Common Issues
+- **Failed submission**: Check connectivity or storage limits.
 
 ---
 
-### **10. Mobile vs Desktop Differences**  
-| **Feature**       | **Mobile (iPad)** | **Desktop** |  
-|--------------------|-------------------|-------------|  
-| Photo Capture      | ✅ Native camera  | ❌ Use upload |  
-| Offline Mode       | ✅ Supported      | ❌ Always online |  
-| Bulk Actions       | ❌                | ✅ Edit 10+ reports |  
+## Viewing Calendar
+
+### Purpose
+Schedulers/Admins assign dates. Foremen track upcoming tasks.
+
+### Step-by-Step
+1. Tap the **Calendar** tab.
+2. Switch views: **Day**, **Week**, or **Month**.
+3. Tap a date-block to see assigned jobs.
+
+[Screenshot: Calendar view highlighting a specific job date]
+
+### Tips
+- Schedulers: Use drag-and-drop to adjust deadlines.
+- Foremen: Add jobs to iPad **Native Calendar** for local alerts.
+
+### Common Issues
+- **Calendar blank?** Ensure date filters match your region/timezone.
 
 ---
 
-### **11. Offline Mode Usage (Foremen Only)**  
-**Steps**:  
-1. Enable “Offline Mode” in Settings.  
-2. Sync jobs/forms once hourly.  
-3. Save QA forms offline; sync when online.  
-[Screenshot: Offline mode toggle]  
+## Receiving Notifications
 
-**Tips**:  
-- Avoid complex edits offline (limited to text fields).  
+### Purpose
+Alerts about job updates, deadlines, or approvals.
+
+### Step-by-Step
+1. Enable **Push Notifications** in **Settings** (Mobile).
+2. Desktop users receive emails or in-app banners.
+
+[Screenshot: Notification settings screen on iPad]
+
+### Tips
+- Foremen: Prioritize **Critical Alerts** (e.g., "Form Expired").
+- Engineers: Enable email alerts for submissions.
+
+### Common Issues
+- **Missing alerts**: Check notification permissions in device settings.
 
 ---
 
-### **12. Getting Help**  
-- **24/7 Support**: [support@sgaqa.com] | [1-800-SGA-HELP]  
-- **In-App**: “Help > Live Chat” (9 AM–6 PM PST).  
-- **FAQs**: [help.sgaqa.com/faqs]  
+## Accessing Past Reports
 
----  
+### Purpose
+Review historical QA data for audits or analysis.
 
-*End of Documentation*  
-*[Screenshot placeholders are marked for design team to fill.]*
+### Step-by-Step
+1. Tap **Reports** > Select **Past Reports**.
+2. Filter by **Date**, **Job Name**, or **Status**.
+3. Export to PDF/Excel for management review.
+
+[Screenshot: Filter options in "Past Reports"]
+
+### Tips
+- Engineers: Use the **Search** bar for terms like "steel quality".
+- Management: Export monthly summaries for board meetings.
+
+### Common Issues
+- **No results?** Broaden the date range or remove filters.
+
+---
+
+## Offline Mode
+
+### Purpose
+Work in low/no connectivity environments (Foremen-focused).
+
+### Step-by-Step
+1. In **Settings**, enable **Offline Mode** (iPad only).
+2. Preload QA forms and job data.
+3. Submit changes when connectivity resumes.
+
+[Screenshot: Offline Mode toggle and data preload section]
+
+### Tips
+- Foremen: Preload jobs for a 5-day trip to avoid syncing issues.
+- Max offline storage: 10 jobs or 150 photos.
+
+### Common Issues
+- **Cannot sync**: Restart app or check for storage limits.
+
+---
+
+## Special Sections
+
+### Quick Start Guide (1-Page Summary)
+
+#### Foremen
+- Login > Jobs > Fill QA Forms > Take Photos > Submit Reports.
+#### Engineers
+- Review forecasts > Validate submissions > Export data.
+#### Schedulers
+- Assign jobs via Calendar > Adjust deadlines.
+#### Management
+- View dashboards > Export monthly reports.
+
+---
+
+### Form Field Descriptions
+
+| Form Type | Key Fields | Expected Input |
+|-----------|------------|----------------|
+| Form 1: Concrete Pour | Slump Test Result, Mixer ID | Numerical, Text |
+| Form 2: Electrical Safety | Circuit Load, Hazard Notes | Dropdown, Rich Text |
+| *(10 more forms with similar structure)* | ... | ... |
+
+---
+
+### Mobile vs Desktop Differences
+
+| Feature         | Mobile (iPad)       | Desktop          |
+|-----------------|---------------------|------------------|
+| QA Form Entry   | Touch/Keyboard      | Keyboard only    |
+| Photo Capture   | Native Camera       | File Upload      |
+| Offline Mode    | Enabled (5-day data)| Not available    |
+| Export Options  | PDF only            | PDF/Excel/CSV    |
+
+---
+
+### Getting Help
+
+- **In-App Help**: Tap **?** icon in bottom-right.
+- **Support Email**: support@sgaqa.com
+- **Wireless Support**: Call 1(800)123-4567 (24/7)
+- **Knowledge Base**: [sgaqahelp/wiki.com](link)
+
+---
+
+*Documentation Version: 2.2 | Last Updated: April 2024*
