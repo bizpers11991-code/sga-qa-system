@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { AppShell, PageContainer } from '../components/layout';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -10,6 +9,7 @@ interface ProtectedRouteProps {
 /**
  * ProtectedRoute wrapper component that checks authentication status
  * Redirects to login if user is not authenticated
+ * Note: AppShell is already applied in App.tsx, so we don't wrap it here
  */
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated } = useAuth();
@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

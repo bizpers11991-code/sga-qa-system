@@ -13,7 +13,7 @@ import {
   CrewResource,
   EquipmentResource,
 } from '../../types';
-import { AppShell, PageContainer, PageHeader } from '../../components/layout';
+import { PageContainer, PageHeader } from '../../components/layout';
 import QaPackTabs, { TabConfig } from '../../components/reports/QaPackTabs';
 import JobSheetDisplay from '../../components/reports/JobSheetDisplay';
 import DailyReportForm from '../../components/reports/DailyReportForm';
@@ -388,7 +388,7 @@ export const QaPackPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <AppShell>
+      
         <PageContainer>
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
@@ -397,13 +397,13 @@ export const QaPackPage: React.FC = () => {
             </div>
           </div>
         </PageContainer>
-      </AppShell>
+      
     );
   }
 
   if (!job || !qaPack) {
     return (
-      <AppShell>
+      
         <PageContainer>
           <div className="text-center py-12">
             <p className="text-gray-600">Job not found</p>
@@ -412,12 +412,12 @@ export const QaPackPage: React.FC = () => {
             </button>
           </div>
         </PageContainer>
-      </AppShell>
+      
     );
   }
 
   return (
-    <AppShell>
+    
       <PageContainer>
         <PageHeader
           title={job.projectName}
@@ -535,7 +535,7 @@ export const QaPackPage: React.FC = () => {
           </div>
         )}
       </PageContainer>
-    </AppShell>
+    
   );
 };
 
