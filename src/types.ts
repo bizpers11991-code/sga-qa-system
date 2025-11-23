@@ -245,6 +245,9 @@ export interface Job {
     itpTemplateId?: string;
     profilingDetails?: ProfilingJobDetails;
     asphaltDetails?: AsphaltJobDetails;
+    clientTier?: 'Tier 1' | 'Tier 2' | 'Tier 3'; // For tier-based site visit automation
+    siteVisitEventIds?: string[]; // Teams calendar event IDs for site visits
+    jobCalendarEventId?: string; // Teams calendar event ID for the job
     schemaVersion?: number;
 }
 
