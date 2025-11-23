@@ -15,7 +15,7 @@ const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [currentPath, setCurrentPath] = useState('/');
 
   // Get user's name from MSAL account
-  const userName = user?.name || user?.username || 'User';
+  const userName = user?.name || 'User';
 
   // For now, we'll use a default role. Later this should come from your backend/database
   // based on the user's email or ID

@@ -21,10 +21,13 @@ export const useAuth = () => {
 
   return {
     isAuthenticated,
-    user: {
-      name: user?.name,
-      // Add other user properties as needed
-    },
+    user: user ? {
+      name: user.name,
+      username: user.username,
+      localAccountId: user.localAccountId,
+      homeAccountId: user.homeAccountId,
+      idTokenClaims: user.idTokenClaims,
+    } : null,
     login,
     logout,
   };

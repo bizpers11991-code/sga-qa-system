@@ -14,7 +14,7 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
   // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenu-ref.current.contains(event.target as Node)) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
     };
@@ -44,7 +44,7 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
       <div className="flex items-center gap-4">
         {/* Mobile menu button */}
         <button
-          onClick={onMenu-click}
+          onClick={onMenuClick}
           className="lg:hidden p-2 rounded-lg hover:bg-gray-100 min-h-touch min-w-touch flex items-center justify-center"
           aria-label="Open menu"
         >
