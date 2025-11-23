@@ -19,7 +19,8 @@
       "Bash(find:*)",
       "Bash(tee:*)",
       "Bash(npm audit:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
