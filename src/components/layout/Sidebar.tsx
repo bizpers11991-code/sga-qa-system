@@ -27,10 +27,10 @@ const Sidebar: React.FC<SidebarProps> = ({ navigationItems, currentPath, isOpen,
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:sticky top-0 left-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-30
-          transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          fixed lg:relative top-0 left-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-30
+          transform transition-transform duration-300 ease-in-out lg:transition-none
+          lg:transform-none
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         {/* Logo section */}
@@ -71,14 +71,31 @@ const Sidebar: React.FC<SidebarProps> = ({ navigationItems, currentPath, isOpen,
 
         {/* Dark Mode Toggle */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <button
-            onClick={toggleDarkMode}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 min-h-touch text-gray-700 dark:text-gray-300 hover:bg-sga-50 dark:hover:bg-gray-800 hover:text-sga-700 dark:hover:text-sga-400"
-            aria-label="Toggle dark mode"
-          >
-            <span className="text-xl">{isDark ? '☀️' : '🌙'}</span>
-            <span className="font-medium">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{isDark ? '🌙' : '☀️'}</span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {isDark ? 'Dark' : 'Light'} Mode
+              </span>
+            </div>
+            {/* Toggle Switch */}
+            <button
+              onClick={toggleDarkMode}
+              className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sga-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+              style={{
+                backgroundColor: isDark ? '#f59e0b' : '#d1d5db'
+              }}
+              aria-label="Toggle dark mode"
+              role="switch"
+              aria-checked={isDark}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isDark ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </aside>
     </>
