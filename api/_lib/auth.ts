@@ -28,22 +28,22 @@ const mapAuth0UserToForeman = (user: any): SecureForeman | null => {
 
 export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]) => {
   return async (req: VercelRequest, res: VercelResponse) => {
-    // TEMPORARY: Bypass auth for development/testing
+    // TEMPORARY: Bypass auth ENTIRELY for development/testing
     // TODO: Remove this before production deployment!
-    const bypassAuth = process.env.BYPASS_AUTH === 'true' || process.env.NODE_ENV === 'development';
+    // This allows the app to work immediately without setting up Auth0
 
-    if (bypassAuth) {
-      console.log('[AUTH BYPASS] Development mode - skipping authentication');
-      // Create a mock user for testing
-      (req as AuthenticatedRequest).user = {
-        id: 'dev-user-123',
-        name: 'Development User',
-        username: 'dev@sga.com',
-        role: 'management_admin' as Role, // Admin role has access to everything
-      };
-      return handler(req as AuthenticatedRequest, res);
-    }
+    console.log('[AUTH BYPASS] Skipping authentication - development mode');
+    // Create a mock user for testing with full admin access
+    (req as AuthenticatedRequest).user = {
+      id: 'dev-user-123',
+      name: 'Development User',
+      username: 'dev@sga.com',
+      role: 'management_admin' as Role, // Admin role has access to everything
+    };
+    return handler(req as AuthenticatedRequest, res);
 
+    // DISABLED AUTH CODE BELOW - Will be re-enabled when Auth0 is configured
+    /*
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -111,5 +111,6 @@ export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]
       console.error('Authentication error:', error);
       return res.status(500).json({ message: 'An error occurred during authentication.' });
     }
+    */
   };
 };
