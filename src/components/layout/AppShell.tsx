@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import useAuth from '../../hooks/useAuth';
@@ -11,8 +12,9 @@ interface AppShellProps {
 
 const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/');
+  const currentPath = location.pathname;
 
   // Get user's name from MSAL account
   const userName = user?.name || 'User';

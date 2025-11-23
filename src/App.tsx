@@ -1,8 +1,9 @@
 import { MsalProvider } from '@azure/msal-react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { msalInstance } from './auth/msalConfig';
 import Login from './components/Login';
 import useAuth from './hooks/useAuth';
-import AppRouter from './routing/routes';
+import { RoutesComponent } from './routing/routes';
 import { AppShell } from './components/layout';
 import { useEffect } from 'react';
 
@@ -22,7 +23,7 @@ function AppContent() {
   console.log('[App] User authenticated, showing app shell');
   return (
     <AppShell>
-      <AppRouter />
+      <RoutesComponent />
     </AppShell>
   );
 }
@@ -35,7 +36,9 @@ function App() {
 
   return (
     <MsalProvider instance={msalInstance}>
-      <AppContent />
+      <Router>
+        <AppContent />
+      </Router>
     </MsalProvider>
   );
 }
