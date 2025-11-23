@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import { AppShell, PageContainer } from '../components/layout';
+import { PageContainer } from '../components/layout';
 import ProtectedRoute from './ProtectedRoute';
 import RoleGuard from './RoleGuard';
 
@@ -8,6 +8,7 @@ import RoleGuard from './RoleGuard';
 const DashboardRouter = lazy(() => import('../pages/DashboardRouter'));
 const JobDetail = lazy(() => import('../pages/jobs/JobDetail'));
 const JobList = lazy(() => import('../pages/jobs/JobList'));
+const JobCreate = lazy(() => import('../pages/jobs/JobCreate'));
 const SchedulerPage = lazy(() => import('../pages/scheduler/SchedulerPage'));
 const ReportList = lazy(() => import('../pages/reports/ReportList'));
 const QaPackPage = lazy(() => import('../pages/reports/QaPackPage'));
@@ -38,6 +39,7 @@ export const RoutesComponent = () => {
 
       {/* Jobs Routes */}
       <Route path="/jobs" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobList /></Suspense></ProtectedRoute>} />
+      <Route path="/jobs/create" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobCreate /></Suspense></ProtectedRoute>} />
       <Route path="/jobs/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobDetail /></Suspense></ProtectedRoute>} />
 
       {/* Scheduler Routes */}

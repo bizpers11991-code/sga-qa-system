@@ -39,17 +39,17 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
+    <header className="h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
       {/* Left section */}
       <div className="flex items-center gap-4">
         {/* Mobile menu button */}
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 min-h-touch min-w-touch flex items-center justify-center"
+          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 min-h-touch min-w-touch flex items-center justify-center"
           aria-label="Open menu"
         >
           <svg
-            className="w-6 h-6 text-gray-700"
+            className="w-6 h-6 text-gray-700 dark:text-gray-300"
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -77,7 +77,7 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
         <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 min-h-touch"
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 min-h-touch"
             aria-label="User menu"
             aria-expanded={isUserMenuOpen}
           >
@@ -86,12 +86,12 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
               <span className="text-white text-sm font-semibold">{getUserInitials()}</span>
             </div>
             {/* User name - hidden on mobile */}
-            <span className="hidden md:block text-sm font-medium text-gray-700">
+            <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
               {userName || 'User'}
             </span>
             {/* Dropdown arrow */}
             <svg
-              className={`w-4 h-4 text-gray-500 transition-transform ${
+              className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
                 isUserMenuOpen ? 'rotate-180' : ''
               }`}
               fill="none"
@@ -107,21 +107,21 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
 
           {/* Dropdown menu */}
           {isUserMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
               {/* User info */}
-              <div className="px-4 py-3 border-b border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">{userName || 'User'}</p>
-                <p className="text-xs text-gray-500 mt-1">Safety Grooving Australia</p>
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{userName || 'User'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Safety Grooving Australia</p>
               </div>
 
               {/* Logout */}
-              <div className="border-t border-gray-200 pt-2">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     onLogout();
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 min-h-touch"
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 min-h-touch"
                 >
                   <span>🚪</span>
                   <span>Logout</span>
