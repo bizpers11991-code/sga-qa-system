@@ -1,0 +1,3 @@
+usage: run_task.py [-h] [--worker WORKER] [--output OUTPUT]
+                   {gap_analysis,client_tiers,pdf_system,master_calendar,scope_report,teams_integration,list,test}
+run_task.py: error: argument task: invalid choice: 'pdf_watermark_fix' (choose from gap_analysis, client_tiers, pdf_system, master_calendar, scope_report, teams_integration, list, test)

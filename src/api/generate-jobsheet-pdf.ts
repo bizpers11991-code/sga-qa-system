@@ -54,12 +54,14 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '0mm', right: '0mm', bottom: '15mm', left: '0mm' },
+            margin: { top: '0mm', right: '0mm', bottom: '20mm', left: '0mm' },
             timeout: 60000,
             displayHeaderFooter: true,
             headerTemplate: '<div></div>',
-            footerTemplate: `<div style="font-size: 8pt; width: 100%; padding: 8px 15mm; color: #6b7280; text-align: center; box-sizing: border-box; border-top: 1px solid #e5e7eb;">
-                <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span> | Printed copies are uncontrolled documents</span>
+            footerTemplate: `<div style="font-size: 8pt; width: 100%; padding: 8px 15mm; color: #6b7280; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-top: 1px solid #e5e7eb;">
+                <span style="flex: 0 0 33%; text-align: left;">Doc ID: JS-${job.jobNo || job.id} v1.0</span>
+                <span style="flex: 0 0 34%; text-align: center;">Printed copies are uncontrolled documents</span>
+                <span style="flex: 0 0 33%; text-align: right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
             </div>`
         });
 

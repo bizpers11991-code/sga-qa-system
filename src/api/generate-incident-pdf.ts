@@ -68,17 +68,17 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         const page = await browser.newPage();
         await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
         
-        const pdfBuffer = await page.pdf({ 
-            format: 'A4', 
-            printBackground: true, 
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
             margin: { top: '1.5cm', right: '1.5cm', bottom: '2cm', left: '1.5cm' },
             timeout: 30000,
             displayHeaderFooter: true,
             headerTemplate: '<div></div>',
             footerTemplate: `<div style="font-size: 8px; width: 100%; padding: 0 1.5cm; color: #4a5568; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <span style="flex: 1; text-align: left;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-                <span style="flex: 1; text-align: center;">Printed copies are uncontrolled documents</span>
-                <span style="flex: 1;"></span>
+                <span style="flex: 0 0 33%; text-align: left;">Doc ID: ${incident.reportId} v1.0</span>
+                <span style="flex: 0 0 34%; text-align: center;">Printed copies are uncontrolled documents</span>
+                <span style="flex: 0 0 33%; text-align: right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
             </div>`
         });
 

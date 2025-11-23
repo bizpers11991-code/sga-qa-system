@@ -23,6 +23,24 @@ const Detail: React.FC<{ label: string; value?: React.ReactNode; colSpan?: numbe
     )
 );
 
+const Watermark: React.FC = () => (
+    React.createElement('div', {
+        style: {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(-45deg)',
+            fontSize: '120px',
+            fontWeight: 'bold',
+            color: '#e0e0e0',
+            opacity: 0.15,
+            zIndex: -1,
+            userSelect: 'none',
+            pointerEvents: 'none'
+        }
+    }, 'SGA')
+);
+
 const PageHeader: React.FC<{ job: Job }> = ({ job }) => (
     React.createElement('header', { className: "page-header" },
         React.createElement(SgaLogo, { style: { height: '1.5cm', width: 'auto' } }),
@@ -176,7 +194,8 @@ const JobSheetPrintView: React.FC<{ job: Job }> = ({ job }) => {
               .detail-value { font-size: 9pt; color: #111827; white-space: pre-wrap; word-break: break-word; }
               .avoid-break { break-inside: avoid; }
             `),
-            
+            React.createElement(Watermark),
+
             React.createElement(PageHeader, { job: job }),
 
             renderDivisionSheet(),
