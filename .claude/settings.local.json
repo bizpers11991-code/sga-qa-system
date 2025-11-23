@@ -17,7 +17,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(find:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

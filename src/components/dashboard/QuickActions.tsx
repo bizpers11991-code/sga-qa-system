@@ -18,28 +18,28 @@ export interface QuickActionsProps {
 
 const defaultActions: QuickAction[] = [
   {
-    id: 'create-job',
-    title: 'Create Job',
-    description: 'Start a new job assignment',
+    id: 'view-jobs',
+    title: 'View Jobs',
+    description: 'Browse all job assignments',
     icon: '💼',
-    path: '/jobs/create',
+    path: '/jobs',
     color: 'border-blue-200 hover:border-blue-700 hover:bg-blue-50'
   },
   {
-    id: 'submit-report',
-    title: 'Submit Report',
-    description: 'Complete and submit QA pack',
+    id: 'view-reports',
+    title: 'View Reports',
+    description: 'Browse QA pack reports',
     icon: '📊',
-    path: '/reports/submit',
+    path: '/reports',
     color: 'border-green-200 hover:border-green-700 hover:bg-green-50'
   },
   {
-    id: 'report-incident',
-    title: 'Report Incident',
-    description: 'Log safety incident or hazard',
-    icon: '⚠️',
-    path: '/incidents/create',
-    color: 'border-red-200 hover:border-red-700 hover:bg-red-50'
+    id: 'view-scheduler',
+    title: 'View Scheduler',
+    description: 'Check project schedule',
+    icon: '📅',
+    path: '/scheduler',
+    color: 'border-orange-200 hover:border-orange-700 hover:bg-orange-50'
   },
   {
     id: 'view-resources',

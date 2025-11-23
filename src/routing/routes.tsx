@@ -18,18 +18,16 @@ const ResourceList = lazy(() => import('../pages/resources/ResourceList'));
 const AdminPanel = lazy(() => import('../pages/admin/AdminPanel'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
-// Loading fallback component
+// Loading fallback component (no AppShell - already wrapped in App.tsx)
 const LoadingFallback = () => (
-  <AppShell>
-    <PageContainer>
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-sga-100 border-t-sga-700 rounded-full animate-spin"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
+  <PageContainer>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="w-12 h-12 mx-auto mb-4 border-4 border-sga-100 border-t-sga-700 rounded-full animate-spin"></div>
+        <p className="text-gray-600 dark:text-gray-300">Loading...</p>
       </div>
-    </PageContainer>
-  </AppShell>
+    </div>
+  </PageContainer>
 );
 
 export const RoutesComponent = () => {

@@ -64,7 +64,7 @@ const AppShell: React.FC<AppShellProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Sidebar */}
       <Sidebar
         navigationItems={navigationItems}
@@ -84,7 +84,7 @@ const AppShell: React.FC<AppShellProps> = ({ children }) => {
         />
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
           {children}
         </main>
       </div>

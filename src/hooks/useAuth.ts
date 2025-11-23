@@ -46,7 +46,7 @@ export const useAuth = () => {
   return {
     isAuthenticated,
     user: user ? {
-      name: user.name,
+      name: user.name || (user.idTokenClaims as any)?.name || user.username || 'User',
       username: user.username,
       localAccountId: user.localAccountId,
       homeAccountId: user.homeAccountId,
