@@ -1,0 +1,156 @@
+{
+  "task_id": "PM_SCHEDULER_001",
+  "title": "Enhanced Scheduler with Project Awareness",
+  "assigned_to": "deepseek",
+  "priority": "P2",
+  "phase": 3,
+  "estimated_hours": 10,
+  "description": "Enhance the existing scheduler to be project-aware and support cross-division coordination",
+  "deliverables": [
+    {
+      "file": "src/pages/scheduler/ProjectScheduler.tsx",
+      "description": "New project-aware scheduler page"
+    },
+    {
+      "file": "src/components/scheduler/ProjectCalendar.tsx",
+      "description": "Calendar with project grouping"
+    },
+    {
+      "file": "src/components/scheduler/CrewAvailability.tsx",
+      "description": "Crew availability view"
+    },
+    {
+      "file": "src/components/scheduler/ResourceAllocation.tsx",
+      "description": "Resource allocation panel"
+    },
+    {
+      "file": "src/components/scheduler/ProjectGantt.tsx",
+      "description": "Gantt chart view for projects"
+    },
+    {
+      "file": "src/components/scheduler/CrewCard.tsx",
+      "description": "Draggable crew card"
+    },
+    {
+      "file": "src/hooks/useCrewAvailability.ts",
+      "description": "Hook for crew availability logic"
+    },
+    {
+      "file": "api/get-crew-availability.ts",
+      "description": "API for crew availability data"
+    },
+    {
+      "file": "api/assign-crew-to-job.ts",
+      "description": "API to assign crew to job"
+    }
+  ],
+  "ui_specifications": {
+    "ProjectScheduler": {
+      "views": [
+        {
+          "id": "week",
+          "title": "Weekly View",
+          "description": "Current weekly calendar (enhanced)"
+        },
+        {
+          "id": "month",
+          "title": "Monthly View",
+          "description": "Month overview with project bars"
+        },
+        {
+          "id": "gantt",
+          "title": "Gantt View",
+          "description": "Project timeline with dependencies"
+        },
+        {
+          "id": "resources",
+          "title": "Resource View",
+          "description": "Crew and equipment allocation"
+        }
+      ],
+      "filters": [
+        "Division (All/Asphalt/Profiling/Spray)",
+        "Crew",
+        "Project Owner",
+        "Status"
+      ],
+      "features": [
+        "Drag-and-drop crew assignment",
+        "Conflict detection (crew double-booked)",
+        "Equipment tracking",
+        "Project grouping"
+      ]
+    },
+    "CrewAvailability": {
+      "display": [
+        "Crew name",
+        "Division",
+        "Current assignment (if any)",
+        "Upcoming assignments",
+        "Available dates (green)",
+        "Booked dates (red)"
+      ],
+      "interactions": [
+        "Click crew to see details",
+        "Drag crew to calendar to assign",
+        "Filter by division"
+      ]
+    },
+    "ProjectGantt": {
+      "rows": "One row per project",
+      "bars": [
+        "Project duration (full bar)",
+        "Division work periods (sub-bars by color)",
+        "Site visits (milestone markers)",
+        "Today line"
+      ],
+      "interactions": [
+        "Hover for details",
+        "Click to open project",
+        "Zoom (day/week/month)"
+      ]
+    },
+    "ResourceAllocation": {
+      "sections": [
+        {
+          "title": "Crews",
+          "content": "List of crews with availability status"
+        },
+        {
+          "title": "Equipment",
+          "content": "Equipment list with allocation"
+        }
+      ],
+      "drag_drop": "Drag resource to calendar slot"
+    }
+  },
+  "scheduling_logic": {
+    "conflict_detection": {
+      "rule": "Same crew cannot be in two places same day",
+      "warning": "Show warning before allowing override",
+      "block": "Block if crew already confirmed elsewhere"
+    },
+    "project_priority": {
+      "tier_1": "Highest priority",
+      "tier_2": "Medium priority",
+      "tier_3": "Standard priority"
+    },
+    "auto_suggestions": {
+      "feature": "Suggest available crews for a job",
+      "logic": "Based on division, date, proximity"
+    }
+  },
+  "teams_integration": {
+    "calendar_sync": "Sync with Teams shared calendar",
+    "bidirectional": "Changes in either reflect in both",
+    "conflict_resolution": "App is source of truth"
+  },
+  "success_criteria": [
+    "All views render correctly",
+    "Drag-drop assignment works",
+    "Conflicts detected and shown",
+    "Teams calendar syncs",
+    "Project grouping visible",
+    "Performance good with 100+ jobs"
+  ]
+}

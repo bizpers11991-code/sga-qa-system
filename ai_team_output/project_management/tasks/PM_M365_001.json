@@ -1,0 +1,166 @@
+{
+  "task_id": "PM_M365_001",
+  "title": "SharePoint & Teams Integration for Project Management",
+  "assigned_to": "grok1",
+  "priority": "P2",
+  "phase": 3,
+  "estimated_hours": 8,
+  "description": "Implement SharePoint folder automation and Teams integration for project management",
+  "deliverables": [
+    {
+      "file": "api/_lib/sharepoint-project.ts",
+      "description": "SharePoint operations for projects"
+    },
+    {
+      "file": "api/_lib/teams-project.ts",
+      "description": "Teams operations for projects"
+    },
+    {
+      "file": "m365-deployment/power-automate/ProjectFolderCreation.json",
+      "description": "Power Automate flow for folder creation"
+    },
+    {
+      "file": "m365-deployment/power-automate/ScopeReportNotification.json",
+      "description": "Power Automate flow for scope report"
+    },
+    {
+      "file": "m365-deployment/power-automate/DivisionRequestFlow.json",
+      "description": "Power Automate flow for division requests"
+    },
+    {
+      "file": "m365-deployment/power-automate/SiteVisitReminder.json",
+      "description": "Power Automate flow for site visit reminders"
+    }
+  ],
+  "sharepoint_operations": {
+    "create_project_folder": {
+      "trigger": "On project creation",
+      "structure": [
+        "02_Projects/{ProjectNumber}/",
+        "02_Projects/{ProjectNumber}/ScopeReports/",
+        "02_Projects/{ProjectNumber}/JobSheets/",
+        "02_Projects/{ProjectNumber}/ShiftPlans/",
+        "02_Projects/{ProjectNumber}/QAPacks/",
+        "02_Projects/{ProjectNumber}/NCRs/",
+        "02_Projects/{ProjectNumber}/Incidents/",
+        "02_Projects/{ProjectNumber}/Photos/"
+      ],
+      "metadata": [
+        "ProjectNumber",
+        "ProjectName",
+        "Client",
+        "ClientTier",
+        "ProjectOwner",
+        "Status"
+      ]
+    },
+    "document_storage": {
+      "scope_reports": "02_Projects/{ProjectNumber}/ScopeReports/{ReportNumber}.pdf",
+      "job_sheets": "02_Projects/{ProjectNumber}/JobSheets/{JobNo}_{Date}.pdf",
+      "qa_packs": "02_Projects/{ProjectNumber}/QAPacks/{JobNo}_{Date}.pdf",
+      "ncrs": "02_Projects/{ProjectNumber}/NCRs/{NCRId}.pdf",
+      "incidents": "02_Projects/{ProjectNumber}/Incidents/{IncidentId}.pdf"
+    },
+    "list_operations": {
+      "projects_list": "Create/update SharePoint list of projects",
+      "index_updates": "Update ProjectIndex.xlsx on changes"
+    }
+  },
+  "teams_operations": {
+    "calendar_events": {
+      "site_visits": {
+        "title": "Site Visit: {ProjectName} (Visit {VisitNumber})",
+        "location": "{ProjectLocation}",
+        "attendees": ["scopingPerson", "projectOwner"],
+        "reminder": "1 day before"
+      },
+      "job_scheduling": {
+        "title": "{Division} Work: {ProjectName}",
+        "attendees": ["assignedForeman", "assignedCrew"],
+        "body": "Job details and location"
+      }
+    },
+    "channel_posts": {
+      "scope_report_submitted": {
+        "channel": "Project Updates",
+        "format": "Adaptive Card",
+        "content": [
+          "Report number",
+          "Project name",
+          "Visit type",
+          "Key findings",
+          "Recommendations",
+          "Link to PDF"
+        ]
+      },
+      "division_request": {
+        "channel": "Division Coordination",
+        "mentions": ["requestedTo engineer"],
+        "content": [
+          "Request from",
+          "Project name",
+          "Work required",
+          "Dates requested",
+          "Link to respond"
+        ]
+      }
+    },
+    "notifications": {
+      "email_plus_teams": "Critical notifications to both",
+      "teams_only": "Status updates, reminders"
+    }
+  },
+  "power_automate_flows": {
+    "ProjectFolderCreation": {
+      "trigger": "When HTTP request received (from API)",
+      "actions": [
+        "Parse project data",
+        "Create folder structure",
+        "Set metadata",
+        "Add to projects list",
+        "Send confirmation"
+      ]
+    },
+    "ScopeReportNotification": {
+      "trigger": "When file created in ScopeReports folder",
+      "actions": [
+        "Get file metadata",
+        "Extract key data",
+        "Post to Teams channel",
+        "Send email to project owner"
+      ]
+    },
+    "DivisionRequestFlow": {
+      "trigger": "When HTTP request received (from API)",
+      "actions": [
+        "Parse request data",
+        "Post to Teams channel with @mention",
+        "Send email to division engineer",
+        "Create calendar placeholder"
+      ]
+    },
+    "SiteVisitReminder": {
+      "trigger": "Scheduled (daily at 7am)",
+      "actions": [
+        "Query upcoming site visits (next 3 days)",
+        "For each visit: send reminder",
+        "Post summary to Teams"
+      ]
+    }
+  },
+  "api_functions": {
+    "createProjectFolder": "Create full folder structure in SharePoint",
+    "uploadProjectDocument": "Upload document to correct location",
+    "createTeamsEvent": "Create calendar event with attendees",
+    "postToTeamsChannel": "Post adaptive card to channel",
+    "syncCalendarEvent": "Sync event between app and Teams"
+  },
+  "success_criteria": [
+    "Folders created automatically on project creation",
+    "Documents stored in correct locations",
+    "Calendar events appear in Teams",
+    "Channel notifications posted",
+    "Reminders sent on schedule",
+    "Bidirectional calendar sync works"
+  ]
+}

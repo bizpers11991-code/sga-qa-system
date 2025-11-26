@@ -1,0 +1,157 @@
+{
+  "task_id": "PM_UI_003",
+  "title": "Create Scope Report UI Components",
+  "assigned_to": "gemini",
+  "priority": "P2",
+  "phase": 2,
+  "estimated_hours": 8,
+  "description": "Create mobile-first scope report form and list components",
+  "deliverables": [
+    {
+      "file": "src/pages/scope-reports/ScopeReportList.tsx",
+      "description": "List view for scope reports"
+    },
+    {
+      "file": "src/pages/scope-reports/ScopeReportCreate.tsx",
+      "description": "Create/edit scope report page"
+    },
+    {
+      "file": "src/components/scope-reports/ScopeReportForm.tsx",
+      "description": "Multi-section field form"
+    },
+    {
+      "file": "src/components/scope-reports/SiteAccessibilitySection.tsx",
+      "description": "Site access assessment section"
+    },
+    {
+      "file": "src/components/scope-reports/SurfaceConditionSection.tsx",
+      "description": "Surface condition with photos"
+    },
+    {
+      "file": "src/components/scope-reports/MeasurementsSection.tsx",
+      "description": "Area, depth, chainages input"
+    },
+    {
+      "file": "src/components/scope-reports/HazardsSection.tsx",
+      "description": "Hazard identification and controls"
+    },
+    {
+      "file": "src/components/scope-reports/ScopeReportCard.tsx",
+      "description": "Card for list display"
+    },
+    {
+      "file": "src/components/scope-reports/index.ts",
+      "description": "Barrel export file"
+    },
+    {
+      "file": "src/services/scopeReportsApi.ts",
+      "description": "API client for scope report endpoints"
+    }
+  ],
+  "ui_specifications": {
+    "ScopeReportForm": {
+      "design_principle": "Mobile-first (iPad in field use)",
+      "sections": [
+        {
+          "id": "visit_details",
+          "title": "Visit Details",
+          "fields": [
+            "projectId (read-only, from context)",
+            "visitNumber (auto from tier)",
+            "visitType (auto from tier)",
+            "actualDate (date picker, default today)"
+          ]
+        },
+        {
+          "id": "site_access",
+          "title": "Site Accessibility",
+          "fields": [
+            "accessible (yes/no toggle)",
+            "accessNotes (textarea)",
+            "restrictions (multi-select or chips)"
+          ]
+        },
+        {
+          "id": "surface",
+          "title": "Surface Condition",
+          "fields": [
+            "currentCondition (select: Good/Fair/Poor/Critical)",
+            "defects (multi-select checklist)",
+            "photos (photo capture with camera)"
+          ]
+        },
+        {
+          "id": "measurements",
+          "title": "Measurements",
+          "fields": [
+            "area (number with m² unit)",
+            "depth (number with mm unit)",
+            "chainages (dynamic list: start/end pairs)"
+          ]
+        },
+        {
+          "id": "traffic",
+          "title": "Traffic Management",
+          "fields": [
+            "required (yes/no toggle)",
+            "tmpRequired (yes/no toggle)",
+            "restrictions (multi-select)",
+            "notes (textarea)"
+          ]
+        },
+        {
+          "id": "utilities",
+          "title": "Utility Services",
+          "fields": [
+            "identified (yes/no toggle)",
+            "services (checkboxes: Gas, Water, Telstra, Power, NBN, Other)",
+            "photos (photo capture)"
+          ]
+        },
+        {
+          "id": "hazards",
+          "title": "Hazards",
+          "fields": [
+            "identified (yes/no toggle)",
+            "hazardList (dynamic list: hazard + control pairs)"
+          ]
+        },
+        {
+          "id": "summary",
+          "title": "Summary & Recommendations",
+          "fields": [
+            "recommendations (textarea)",
+            "estimatedDuration (number in days)"
+          ]
+        },
+        {
+          "id": "signature",
+          "title": "Sign Off",
+          "fields": [
+            "signature (signature pad component)"
+          ]
+        }
+      ],
+      "features": [
+        "Auto-save draft every 30 seconds",
+        "GPS location capture on submit",
+        "Works offline (PWA)",
+        "Photo compression before upload",
+        "Progress indicator"
+      ]
+    }
+  },
+  "offline_requirements": {
+    "draft_storage": "IndexedDB via offlineStorage.ts",
+    "photo_queue": "Store photos until online",
+    "sync_on_reconnect": "Auto-submit when back online"
+  },
+  "success_criteria": [
+    "Form works completely offline",
+    "Photos captured from iPad camera",
+    "GPS location captured",
+    "Draft saves automatically",
+    "Submits successfully online",
+    "Syncs when reconnected"
+  ]
+}

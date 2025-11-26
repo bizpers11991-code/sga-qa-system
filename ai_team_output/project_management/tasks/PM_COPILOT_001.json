@@ -1,0 +1,149 @@
+{
+  "task_id": "PM_COPILOT_001",
+  "title": "Project-Aware Copilot Integration",
+  "assigned_to": "gemini",
+  "priority": "P3",
+  "phase": 4,
+  "estimated_hours": 10,
+  "description": "Implement Copilot AI that understands project context and can answer project-specific questions",
+  "deliverables": [
+    {
+      "file": "api/copilot-query.ts",
+      "description": "API endpoint for Copilot queries"
+    },
+    {
+      "file": "api/_lib/copilotHandler.ts",
+      "description": "Copilot business logic and context management"
+    },
+    {
+      "file": "api/_lib/projectIndexer.ts",
+      "description": "Project document indexing for Copilot"
+    },
+    {
+      "file": "src/components/copilot/CopilotChat.tsx",
+      "description": "Chat interface component"
+    },
+    {
+      "file": "src/components/copilot/CopilotWidget.tsx",
+      "description": "Dashboard widget for quick queries"
+    },
+    {
+      "file": "src/components/copilot/ProjectInsights.tsx",
+      "description": "AI-generated project insights panel"
+    },
+    {
+      "file": "m365-deployment/copilot/project_copilot_config.json",
+      "description": "Copilot configuration for project context"
+    }
+  ],
+  "copilot_capabilities": {
+    "project_queries": {
+      "examples": [
+        "How many days has Project PRJ-2025-001 been active?",
+        "What NCRs are open for the Main Street project?",
+        "Show me all QA packs submitted by John Smith this month",
+        "Which projects are at risk of missing their deadline?",
+        "Summarize the scope reports for the CBD project"
+      ],
+      "data_sources": [
+        "Projects",
+        "Jobs",
+        "Scope Reports",
+        "QA Packs",
+        "NCRs",
+        "Incidents",
+        "Division Requests"
+      ]
+    },
+    "cross_division_insights": {
+      "examples": [
+        "Which profiling jobs are pending for asphalt projects?",
+        "Show me division requests that haven't been responded to",
+        "How much profiling work is scheduled this week?"
+      ]
+    },
+    "scheduling_assistance": {
+      "examples": [
+        "Which crews are available next Monday?",
+        "Can we fit a new job on Wednesday for Crew A?",
+        "Show scheduling conflicts for next week"
+      ]
+    },
+    "reporting": {
+      "examples": [
+        "Generate a project status report for client XYZ",
+        "What's our QA completion rate this month?",
+        "List all incidents across active projects"
+      ]
+    }
+  },
+  "technical_implementation": {
+    "context_building": {
+      "method": "RAG (Retrieval Augmented Generation)",
+      "indexing": [
+        "Index project metadata",
+        "Index document summaries",
+        "Index QA pack data",
+        "Index status changes"
+      ],
+      "context_window": "Include relevant project context in prompts"
+    },
+    "query_processing": {
+      "steps": [
+        "Parse user query",
+        "Identify entities (project, person, date)",
+        "Retrieve relevant context from index",
+        "Generate prompt with context",
+        "Call Gemini API",
+        "Format response"
+      ]
+    },
+    "caching": {
+      "index_cache": "Redis for document index",
+      "query_cache": "Cache common queries for 5 minutes",
+      "invalidation": "Invalidate on data changes"
+    }
+  },
+  "ui_specifications": {
+    "CopilotChat": {
+      "location": "Slide-out panel from right",
+      "features": [
+        "Full conversation history",
+        "Context-aware suggestions",
+        "Quick actions from responses",
+        "Export conversation"
+      ]
+    },
+    "CopilotWidget": {
+      "location": "Dashboard card",
+      "features": [
+        "Quick query input",
+        "Suggested queries",
+        "Recent queries",
+        "Expand to full chat"
+      ]
+    },
+    "ProjectInsights": {
+      "location": "Project detail page",
+      "features": [
+        "Auto-generated project summary",
+        "Risk indicators",
+        "Upcoming milestones",
+        "Action recommendations"
+      ]
+    }
+  },
+  "security": {
+    "data_filtering": "Only show data user has access to",
+    "role_based": "Respect role permissions in responses",
+    "audit_log": "Log all Copilot queries",
+    "pii_protection": "Don't expose sensitive data to external AI"
+  },
+  "success_criteria": [
+    "Copilot answers project-specific questions accurately",
+    "Response time under 3 seconds",
+    "Context-aware suggestions helpful",
+    "Respects user permissions",
+    "Works across all data types"
+  ]
+}

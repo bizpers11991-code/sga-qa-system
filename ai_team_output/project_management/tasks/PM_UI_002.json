@@ -1,0 +1,121 @@
+{
+  "task_id": "PM_UI_002",
+  "title": "Create Project Management UI Components",
+  "assigned_to": "grok2",
+  "priority": "P2",
+  "phase": 2,
+  "estimated_hours": 10,
+  "description": "Create UI components for project management dashboard and views",
+  "deliverables": [
+    {
+      "file": "src/pages/projects/ProjectList.tsx",
+      "description": "List view for all projects"
+    },
+    {
+      "file": "src/pages/projects/ProjectDetail.tsx",
+      "description": "Full project view with all data"
+    },
+    {
+      "file": "src/pages/projects/ProjectDashboard.tsx",
+      "description": "Project overview dashboard"
+    },
+    {
+      "file": "src/components/projects/ProjectHeader.tsx",
+      "description": "Project header with key info and actions"
+    },
+    {
+      "file": "src/components/projects/ProjectTimeline.tsx",
+      "description": "Visual timeline of project phases"
+    },
+    {
+      "file": "src/components/projects/DivisionStatusCard.tsx",
+      "description": "Per-division status display"
+    },
+    {
+      "file": "src/components/projects/ProjectProgressBar.tsx",
+      "description": "Overall project progress indicator"
+    },
+    {
+      "file": "src/components/projects/RelatedDocsSection.tsx",
+      "description": "Section showing all related documents"
+    },
+    {
+      "file": "src/components/projects/index.ts",
+      "description": "Barrel export file"
+    },
+    {
+      "file": "src/services/projectsApi.ts",
+      "description": "API client for project endpoints"
+    }
+  ],
+  "ui_specifications": {
+    "ProjectList": {
+      "views": ["Table view", "Card view", "Kanban by status"],
+      "filters": ["Status", "Division", "Project Owner", "Client Tier", "Date Range"],
+      "actions": ["Create Project", "Bulk actions (status change)"]
+    },
+    "ProjectDetail": {
+      "layout": "Tab-based layout",
+      "tabs": [
+        {
+          "id": "overview",
+          "title": "Overview",
+          "content": ["Project header", "Progress bar", "Division status cards", "Timeline"]
+        },
+        {
+          "id": "scope",
+          "title": "Scope Reports",
+          "content": ["List of scope reports", "View/Download PDF"]
+        },
+        {
+          "id": "schedule",
+          "title": "Schedule",
+          "content": ["Job calendar", "Crew assignments", "Division requests"]
+        },
+        {
+          "id": "qa",
+          "title": "QA & Compliance",
+          "content": ["QA packs list", "NCRs", "Incidents"]
+        },
+        {
+          "id": "documents",
+          "title": "Documents",
+          "content": ["All SharePoint documents", "Upload new"]
+        }
+      ]
+    },
+    "DivisionStatusCard": {
+      "display": [
+        "Division name with icon",
+        "Status badge (Pending/Assigned/In Progress/Completed)",
+        "Assigned engineer name",
+        "Assigned crews",
+        "Progress (jobs completed / total)",
+        "Quick actions (request crew, view QA)"
+      ]
+    },
+    "ProjectTimeline": {
+      "events": [
+        "Project created",
+        "Site visits (by tier)",
+        "Division work periods",
+        "QA submissions",
+        "Project completion"
+      ],
+      "display": "Horizontal scrollable timeline with markers"
+    }
+  },
+  "design_requirements": {
+    "layout": "Dashboard-style with card components",
+    "data_density": "Show key metrics prominently",
+    "real_time": "Auto-refresh project status",
+    "mobile": "Simplified view for foreman access"
+  },
+  "success_criteria": [
+    "Full project lifecycle visible",
+    "All related data accessible",
+    "Status updates work",
+    "Navigation intuitive",
+    "Performance good with many projects"
+  ]
+}

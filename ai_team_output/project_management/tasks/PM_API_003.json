@@ -1,0 +1,104 @@
+{
+  "task_id": "PM_API_003",
+  "title": "Create Scope Report API Endpoints",
+  "assigned_to": "qwen",
+  "priority": "P1",
+  "phase": 1,
+  "estimated_hours": 6,
+  "description": "Create API endpoints for scope report submission and management",
+  "deliverables": [
+    {
+      "file": "api/submit-scope-report.ts",
+      "description": "POST endpoint to submit scope report"
+    },
+    {
+      "file": "api/get-scope-reports.ts",
+      "description": "GET endpoint to list scope reports"
+    },
+    {
+      "file": "api/get-scope-report.ts",
+      "description": "GET endpoint to get single scope report"
+    },
+    {
+      "file": "api/generate-scope-report-pdf.ts",
+      "description": "GET endpoint to generate PDF of scope report"
+    },
+    {
+      "file": "api/_lib/scopeReportHandler.ts",
+      "description": "Business logic for scope report operations"
+    },
+    {
+      "file": "api/_lib/ScopeReportPrintView.tsx",
+      "description": "React component for PDF rendering"
+    }
+  ],
+  "requirements": [
+    "Mobile-first form submission (iPad in field)",
+    "Photo upload with compression",
+    "GPS location capture",
+    "Offline draft saving capability",
+    "PDF generation with SGA branding",
+    "Notification to project owner on submission",
+    "Teams channel summary post"
+  ],
+  "api_specifications": {
+    "submit-scope-report": {
+      "method": "POST",
+      "auth": "any authenticated user (scoping person)",
+      "body": "ScopeReport data",
+      "actions": [
+        "Save report to SharePoint",
+        "Generate PDF",
+        "Notify project owner",
+        "Post summary to Teams",
+        "Update project status"
+      ]
+    },
+    "get-scope-reports": {
+      "method": "GET",
+      "query_params": ["projectId", "completedBy", "status", "visitType"],
+      "response": "ScopeReport[]"
+    },
+    "generate-scope-report-pdf": {
+      "method": "GET",
+      "params": "id",
+      "response": "PDF binary"
+    }
+  },
+  "pdf_specifications": {
+    "header": {
+      "logo": "SGA Logo top-left",
+      "title": "Site Scope Report",
+      "report_number": "Right aligned",
+      "project_info": "Project name, client, location"
+    },
+    "body_sections": [
+      "Visit Details (date, visit #, type)",
+      "Site Accessibility Assessment",
+      "Surface Condition with photos",
+      "Measurements (area, depth, chainages)",
+      "Traffic Management Requirements",
+      "Utility Services Identified",
+      "Hazards and Controls",
+      "Recommendations"
+    ],
+    "footer": {
+      "signature": "Scoping person signature",
+      "page_numbers": "Bottom right",
+      "warning": "Printed copies are uncontrolled documents",
+      "document_id": "Bottom left"
+    },
+    "styling": {
+      "margins": "0.3-1.8 inches",
+      "watermark": "SGA logo watermark",
+      "font": "Helvetica Neue"
+    }
+  },
+  "success_criteria": [
+    "Reports submit successfully from field",
+    "Photos upload and display correctly",
+    "PDF matches branding requirements",
+    "Notifications sent correctly",
+    "Teams summary posted"
+  ]
+}

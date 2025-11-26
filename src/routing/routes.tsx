@@ -9,7 +9,17 @@ const DashboardRouter = lazy(() => import('../pages/DashboardRouter'));
 const JobDetail = lazy(() => import('../pages/jobs/JobDetail'));
 const JobList = lazy(() => import('../pages/jobs/JobList'));
 const JobCreate = lazy(() => import('../pages/jobs/JobCreate'));
+const TenderList = lazy(() => import('../pages/tenders/TenderList'));
+const TenderCreate = lazy(() => import('../pages/tenders/TenderCreate'));
+const TenderDetail = lazy(() => import('../pages/tenders/TenderDetail'));
+const ProjectList = lazy(() => import('../pages/projects/ProjectList'));
+const ProjectDetail = lazy(() => import('../pages/projects/ProjectDetail'));
+const ScopeReportList = lazy(() => import('../pages/scope-reports/ScopeReportList'));
+const ScopeReportCreate = lazy(() => import('../pages/scope-reports/ScopeReportCreate'));
+const RequestInbox = lazy(() => import('../pages/division-requests/RequestInbox'));
+const RequestOutbox = lazy(() => import('../pages/division-requests/RequestOutbox'));
 const SchedulerPage = lazy(() => import('../pages/scheduler/SchedulerPage'));
+const ProjectSchedulerPage = lazy(() => import('../pages/scheduler/ProjectSchedulerPage'));
 const ReportList = lazy(() => import('../pages/reports/ReportList'));
 const QaPackPage = lazy(() => import('../pages/reports/QaPackPage'));
 const IncidentList = lazy(() => import('../pages/incidents/IncidentList'));
@@ -42,8 +52,26 @@ export const RoutesComponent = () => {
       <Route path="/jobs/create" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobCreate /></Suspense></ProtectedRoute>} />
       <Route path="/jobs/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><JobDetail /></Suspense></ProtectedRoute>} />
 
+      {/* Tender Routes */}
+      <Route path="/tenders" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><TenderList /></Suspense></ProtectedRoute>} />
+      <Route path="/tenders/create" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><TenderCreate /></Suspense></ProtectedRoute>} />
+      <Route path="/tenders/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><TenderDetail /></Suspense></ProtectedRoute>} />
+
+      {/* Project Routes */}
+      <Route path="/projects" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ProjectList /></Suspense></ProtectedRoute>} />
+      <Route path="/projects/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ProjectDetail /></Suspense></ProtectedRoute>} />
+
+      {/* Scope Reports Routes */}
+      <Route path="/scope-reports" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ScopeReportList /></Suspense></ProtectedRoute>} />
+      <Route path="/scope-reports/create" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ScopeReportCreate /></Suspense></ProtectedRoute>} />
+
+      {/* Division Requests Routes */}
+      <Route path="/division-requests/inbox" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><RequestInbox /></Suspense></ProtectedRoute>} />
+      <Route path="/division-requests/outbox" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><RequestOutbox /></Suspense></ProtectedRoute>} />
+
       {/* Scheduler Routes */}
       <Route path="/scheduler" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><SchedulerPage /></Suspense></ProtectedRoute>} />
+      <Route path="/scheduler/projects" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ProjectSchedulerPage /></Suspense></ProtectedRoute>} />
 
       {/* Reports Routes */}
       <Route path="/reports" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ReportList /></Suspense></ProtectedRoute>} />

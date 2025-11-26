@@ -1,0 +1,100 @@
+{
+  "task_id": "PM_TYPES_001",
+  "title": "Create Project Management TypeScript Types",
+  "assigned_to": "qwen",
+  "priority": "P1",
+  "phase": 1,
+  "estimated_hours": 4,
+  "description": "Create all new TypeScript types for the Project Management evolution of the SGA QA System",
+  "context": {
+    "current_types_file": "src/types.ts",
+    "reference_docs": [
+      "CLAUDE_CODE_PROJECT_MANAGEMENT_SYSTEM_PLAN.md"
+    ]
+  },
+  "deliverables": [
+    {
+      "file": "src/types/project-management.ts",
+      "description": "New types for project management module"
+    },
+    {
+      "file": "src/types.ts",
+      "description": "Updated main types file with imports"
+    }
+  ],
+  "requirements": [
+    "TenderHandover interface with all fields for handover form",
+    "Project interface (evolution from Job) with multi-division support",
+    "ScopeReport interface with site assessment fields",
+    "DivisionRequest interface for cross-division coordination",
+    "ProjectDivision interface for division-specific project data",
+    "Update Role type to include 'tender_admin'",
+    "All types must have proper JSDoc comments",
+    "Export all types from main types.ts"
+  ],
+  "type_definitions": {
+    "TenderHandover": {
+      "required_fields": [
+        "id", "handoverNumber", "dateCreated", "createdBy",
+        "clientId", "clientName", "clientTier",
+        "projectName", "projectDescription", "location",
+        "estimatedStartDate", "estimatedEndDate",
+        "divisionsRequired", "projectOwnerId", "scopingPersonId",
+        "status"
+      ],
+      "optional_fields": [
+        "estimatedArea", "estimatedThickness", "asphaltPlant",
+        "specialRequirements", "contractValue", "contractNumber",
+        "purchaseOrderNumber", "attachments"
+      ]
+    },
+    "Project": {
+      "required_fields": [
+        "id", "projectNumber", "handoverId",
+        "projectName", "client", "clientTier", "location",
+        "projectOwnerId", "projectOwnerDivision", "scopingPersonId",
+        "estimatedStartDate", "estimatedEndDate",
+        "divisions", "status", "jobIds", "scopeReportIds"
+      ],
+      "optional_fields": [
+        "actualStartDate", "actualEndDate",
+        "siteVisitEventIds", "projectCalendarEventId",
+        "qaPackIds", "ncrIds", "incidentIds"
+      ]
+    },
+    "ScopeReport": {
+      "required_fields": [
+        "id", "reportNumber", "projectId",
+        "visitNumber", "visitType", "scheduledDate", "actualDate", "completedBy",
+        "siteAccessibility", "surfaceCondition", "measurements",
+        "trafficManagement", "utilities", "hazards",
+        "recommendations", "estimatedDuration",
+        "photos", "signature", "signedAt", "status"
+      ],
+      "optional_fields": ["documents"]
+    },
+    "DivisionRequest": {
+      "required_fields": [
+        "id", "requestNumber", "projectId",
+        "requestedBy", "requestedDivision", "requestedTo",
+        "workDescription", "location", "requestedDates", "status"
+      ],
+      "optional_fields": [
+        "assignedCrewId", "assignedForemanId",
+        "responseNotes", "confirmedDates", "completedAt", "qaPackId"
+      ]
+    }
+  },
+  "constraints": [
+    "Must be compatible with existing types in src/types.ts",
+    "Use strict TypeScript (no 'any' types)",
+    "Follow existing naming conventions",
+    "Ensure backward compatibility with existing Job type"
+  ],
+  "success_criteria": [
+    "All types compile without errors",
+    "Types are properly exported",
+    "JSDoc comments on all interfaces",
+    "Integration with existing types works"
+  ]
+}

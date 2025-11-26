@@ -1,0 +1,114 @@
+{
+  "task_id": "PM_UI_001",
+  "title": "Create Tender Admin UI Components",
+  "assigned_to": "grok2",
+  "priority": "P2",
+  "phase": 2,
+  "estimated_hours": 8,
+  "description": "Create UI components for tender administration module",
+  "deliverables": [
+    {
+      "file": "src/pages/tenders/TenderList.tsx",
+      "description": "List view for all handovers"
+    },
+    {
+      "file": "src/pages/tenders/TenderCreate.tsx",
+      "description": "Create new handover page"
+    },
+    {
+      "file": "src/pages/tenders/TenderDetail.tsx",
+      "description": "View handover details page"
+    },
+    {
+      "file": "src/components/tenders/TenderHandoverForm.tsx",
+      "description": "Multi-step handover form wizard"
+    },
+    {
+      "file": "src/components/tenders/TenderCard.tsx",
+      "description": "Card component for handover display"
+    },
+    {
+      "file": "src/components/tenders/index.ts",
+      "description": "Barrel export file"
+    },
+    {
+      "file": "src/services/tendersApi.ts",
+      "description": "API client for tender endpoints"
+    }
+  ],
+  "ui_specifications": {
+    "TenderList": {
+      "features": [
+        "Filterable by status, client tier, project owner",
+        "Sortable by date, client, status",
+        "Search by project name or client",
+        "Pagination"
+      ],
+      "actions": [
+        "Create New Handover (tender_admin only)",
+        "View Details",
+        "Quick status filter tabs"
+      ]
+    },
+    "TenderHandoverForm": {
+      "steps": [
+        {
+          "step": 1,
+          "title": "Client Details",
+          "fields": ["clientId (searchable dropdown)", "clientTier", "contractNumber", "purchaseOrderNumber"]
+        },
+        {
+          "step": 2,
+          "title": "Project Details",
+          "fields": ["projectName", "projectDescription", "location (with map picker)", "estimatedStartDate", "estimatedEndDate"]
+        },
+        {
+          "step": 3,
+          "title": "Technical Scope",
+          "fields": ["divisionsRequired (checkboxes)", "estimatedArea", "estimatedThickness", "asphaltPlant", "specialRequirements"]
+        },
+        {
+          "step": 4,
+          "title": "Assignment",
+          "fields": ["projectOwnerId (dropdown by division)", "scopingPersonId (dropdown)", "attachments (file upload)"]
+        },
+        {
+          "step": 5,
+          "title": "Review & Submit",
+          "fields": ["Summary view of all data", "Submit button"]
+        }
+      ],
+      "validation": "Each step validates before next",
+      "save_draft": "Auto-save as draft on each step"
+    },
+    "TenderCard": {
+      "display": [
+        "Handover number",
+        "Project name",
+        "Client (with tier badge)",
+        "Status badge",
+        "Project owner name",
+        "Target start date",
+        "Divisions required (icons)"
+      ]
+    }
+  },
+  "design_requirements": {
+    "colors": {
+      "primary": "SGA amber palette",
+      "tier_1": "green",
+      "tier_2": "yellow",
+      "tier_3": "orange"
+    },
+    "touch_targets": "44px minimum (iPad optimization)",
+    "responsive": "Desktop and tablet layouts",
+    "accessibility": "ARIA labels, keyboard navigation"
+  },
+  "success_criteria": [
+    "Full handover creation workflow works",
+    "List view filters work correctly",
+    "Forms validate properly",
+    "Responsive design works",
+    "Accessible to screen readers"
+  ]
+}

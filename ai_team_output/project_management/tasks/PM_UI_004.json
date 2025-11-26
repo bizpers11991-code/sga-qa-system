@@ -1,0 +1,124 @@
+{
+  "task_id": "PM_UI_004",
+  "title": "Create Division Request UI Components",
+  "assigned_to": "grok2",
+  "priority": "P2",
+  "phase": 2,
+  "estimated_hours": 6,
+  "description": "Create UI components for cross-division request management",
+  "deliverables": [
+    {
+      "file": "src/pages/division-requests/RequestInbox.tsx",
+      "description": "Incoming requests page"
+    },
+    {
+      "file": "src/pages/division-requests/RequestOutbox.tsx",
+      "description": "Sent requests page"
+    },
+    {
+      "file": "src/components/division-requests/DivisionRequestForm.tsx",
+      "description": "Form to create new request"
+    },
+    {
+      "file": "src/components/division-requests/DivisionRequestCard.tsx",
+      "description": "Card for request display"
+    },
+    {
+      "file": "src/components/division-requests/RequestResponseModal.tsx",
+      "description": "Modal for accepting/rejecting request"
+    },
+    {
+      "file": "src/components/division-requests/CrewAssignmentSelector.tsx",
+      "description": "Crew and foreman selection component"
+    },
+    {
+      "file": "src/components/division-requests/index.ts",
+      "description": "Barrel export file"
+    },
+    {
+      "file": "src/services/divisionRequestsApi.ts",
+      "description": "API client for division request endpoints"
+    }
+  ],
+  "ui_specifications": {
+    "RequestInbox": {
+      "layout": "Split view: list left, detail right",
+      "features": [
+        "Filter by status (Pending/Accepted/Rejected/Completed)",
+        "Filter by project",
+        "Sort by date/urgency",
+        "Badge showing pending count in nav"
+      ],
+      "actions": [
+        "Accept request (opens response modal)",
+        "Reject request (opens response modal)",
+        "View project details"
+      ]
+    },
+    "RequestOutbox": {
+      "layout": "Same as inbox",
+      "features": [
+        "Filter by status",
+        "Filter by division",
+        "Track response status"
+      ],
+      "actions": [
+        "Create new request",
+        "Cancel pending request",
+        "View details"
+      ]
+    },
+    "DivisionRequestForm": {
+      "fields": [
+        "projectId (select from user's projects)",
+        "requestedDivision (select: Profiling/Spray/Asphalt)",
+        "workDescription (textarea)",
+        "location (from project, editable)",
+        "requestedDates (multi-date picker)"
+      ],
+      "auto_assignment": "Suggest engineer based on division"
+    },
+    "RequestResponseModal": {
+      "accept_flow": [
+        "Select crew (from available crews)",
+        "Select foreman (from crew members)",
+        "Confirm dates (calendar picker)",
+        "Add notes (optional)"
+      ],
+      "reject_flow": [
+        "Reason for rejection (required)",
+        "Suggest alternative dates (optional)"
+      ]
+    },
+    "DivisionRequestCard": {
+      "display": [
+        "Request number",
+        "Project name",
+        "From/To (users)",
+        "Division (with colored badge)",
+        "Work description (truncated)",
+        "Requested dates",
+        "Status badge",
+        "Time since created"
+      ],
+      "colors": {
+        "pending": "amber",
+        "accepted": "green",
+        "rejected": "red",
+        "completed": "blue"
+      }
+    }
+  },
+  "notifications_integration": {
+    "pending_badge": "Show count in sidebar nav",
+    "toast": "Show toast on new incoming request",
+    "realtime": "Use polling or websocket for updates"
+  },
+  "success_criteria": [
+    "Full request workflow in UI",
+    "Easy crew assignment flow",
+    "Status visible at all times",
+    "Fast response to requests",
+    "Clear visual status indicators"
+  ]
+}

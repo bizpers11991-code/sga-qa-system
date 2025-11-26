@@ -10,13 +10,14 @@ export type Role =
   | 'profiling_engineer'
   | 'spray_admin'
   | 'scheduler_admin'
+  | 'tender_admin'
   | 'management_admin'
   | 'hseq_manager';
 
 export const isAdminRole = (role: Role): boolean => {
   return [
-    'asphalt_engineer', 'profiling_engineer', 'scheduler_admin', 
-    'management_admin', 'hseq_manager', 'spray_admin'
+    'asphalt_engineer', 'profiling_engineer', 'scheduler_admin',
+    'management_admin', 'hseq_manager', 'spray_admin', 'tender_admin'
   ].includes(role);
 };
 
@@ -579,3 +580,13 @@ export interface WeatherData {
     maxTemp: number;
     minTemp: number;
 }
+
+// ============================================================================
+// PROJECT MANAGEMENT MODULE TYPES
+// ============================================================================
+
+/**
+ * Export all types from the Project Management module
+ * Includes: Tender Administration, Project Management, Scope Reports, Division Requests
+ */
+export * from './types/project-management';

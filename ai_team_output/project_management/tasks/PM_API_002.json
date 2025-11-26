@@ -1,0 +1,114 @@
+{
+  "task_id": "PM_API_002",
+  "title": "Create Project Management API Endpoints",
+  "assigned_to": "deepseek",
+  "priority": "P1",
+  "phase": 1,
+  "estimated_hours": 8,
+  "description": "Create API endpoints for project management (evolved from jobs)",
+  "deliverables": [
+    {
+      "file": "api/create-project.ts",
+      "description": "POST endpoint to create new project"
+    },
+    {
+      "file": "api/get-projects.ts",
+      "description": "GET endpoint to list projects with filters"
+    },
+    {
+      "file": "api/get-project.ts",
+      "description": "GET endpoint to get full project details with all related data"
+    },
+    {
+      "file": "api/update-project.ts",
+      "description": "PUT endpoint to update project"
+    },
+    {
+      "file": "api/update-project-status.ts",
+      "description": "PATCH endpoint to update project status"
+    },
+    {
+      "file": "api/_lib/projectHandler.ts",
+      "description": "Business logic for project operations"
+    }
+  ],
+  "requirements": [
+    "Project can be created from handover OR directly by scheduler/engineer",
+    "Project aggregates data from all divisions",
+    "Get project should include: all jobs, all QA packs, all NCRs, all scope reports",
+    "Support filtering by: status, division, project owner, date range, client",
+    "Calculate project progress based on completed divisions",
+    "Link to existing Job entities (backward compatible)"
+  ],
+  "api_specifications": {
+    "create-project": {
+      "method": "POST",
+      "auth": ["tender_admin", "scheduler_admin", "asphalt_engineer", "profiling_engineer", "spray_admin", "management_admin"],
+      "body": {
+        "handoverId": "optional - link to existing handover",
+        "projectName": "required",
+        "client": "required",
+        "clientTier": "required",
+        "location": "required",
+        "projectOwnerId": "required",
+        "scopingPersonId": "required",
+        "estimatedStartDate": "required",
+        "estimatedEndDate": "required",
+        "divisionsRequired": "{ asphalt: boolean, profiling: boolean, spray: boolean }"
+      }
+    },
+    "get-projects": {
+      "method": "GET",
+      "query_params": [
+        "status", "division", "projectOwnerId", "clientTier",
+        "dateFrom", "dateTo", "page", "limit", "sortBy", "sortOrder"
+      ],
+      "response": {
+        "projects": "Project[]",
+        "total": "number",
+        "page": "number",
+        "limit": "number"
+      }
+    },
+    "get-project": {
+      "method": "GET",
+      "params": "id",
+      "response": {
+        "project": "Project",
+        "jobs": "Job[]",
+        "scopeReports": "ScopeReport[]",
+        "qaPacks": "FinalQaPack[]",
+        "ncrs": "NonConformanceReport[]",
+        "incidents": "IncidentReport[]",
+        "divisionRequests": "DivisionRequest[]"
+      }
+    },
+    "update-project-status": {
+      "method": "PATCH",
+      "body": {
+        "status": "Scoping | Scheduled | In Progress | QA Review | Completed | On Hold",
+        "notes": "optional string"
+      }
+    }
+  },
+  "business_logic": {
+    "auto_status_calculation": {
+      "Scoping": "When scope reports pending",
+      "Scheduled": "When crews assigned but not started",
+      "In Progress": "When any job has started",
+      "QA Review": "When all jobs complete, awaiting final review",
+      "Completed": "When all divisions complete and approved",
+      "On Hold": "Manual status"
+    },
+    "progress_calculation": {
+      "formula": "(completed_divisions / total_divisions) * 100",
+      "per_division": "(completed_jobs / total_jobs) * 100"
+    }
+  },
+  "success_criteria": [
+    "Projects can be created from handover and directly",
+    "Full project view aggregates all related data",
+    "Status transitions work correctly",
+    "Backward compatible with existing Job system"
+  ]
+}

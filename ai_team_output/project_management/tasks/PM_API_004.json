@@ -1,0 +1,120 @@
+{
+  "task_id": "PM_API_004",
+  "title": "Create Division Request API Endpoints",
+  "assigned_to": "deepseek",
+  "priority": "P1",
+  "phase": 1,
+  "estimated_hours": 5,
+  "description": "Create API endpoints for cross-division coordination requests",
+  "deliverables": [
+    {
+      "file": "api/create-division-request.ts",
+      "description": "POST endpoint to create division request"
+    },
+    {
+      "file": "api/respond-division-request.ts",
+      "description": "PATCH endpoint to accept/reject request"
+    },
+    {
+      "file": "api/get-division-requests.ts",
+      "description": "GET endpoint to list requests (inbox/outbox)"
+    },
+    {
+      "file": "api/complete-division-request.ts",
+      "description": "PATCH endpoint to mark request as completed"
+    },
+    {
+      "file": "api/_lib/divisionRequestHandler.ts",
+      "description": "Business logic for division requests"
+    }
+  ],
+  "workflow": {
+    "step_1": {
+      "action": "Project owner creates request",
+      "example": "Asphalt engineer requests profiling crew"
+    },
+    "step_2": {
+      "action": "Division engineer receives notification",
+      "channels": ["Email", "Teams", "App notification"]
+    },
+    "step_3": {
+      "action": "Division engineer responds",
+      "options": ["Accept (assign crew)", "Reject (with reason)"]
+    },
+    "step_4": {
+      "action": "On accept - work is scheduled",
+      "result": "Calendar events, crew assignment"
+    },
+    "step_5": {
+      "action": "Division foreman completes work",
+      "result": "QA pack submitted"
+    },
+    "step_6": {
+      "action": "Request marked complete",
+      "result": "QA pack linked to project"
+    }
+  },
+  "api_specifications": {
+    "create-division-request": {
+      "method": "POST",
+      "auth": "project owner (engineer/admin)",
+      "body": {
+        "projectId": "required",
+        "requestedDivision": "Profiling | Spray | Asphalt",
+        "requestedTo": "engineer ID (can be auto-assigned based on division)",
+        "workDescription": "required",
+        "location": "required",
+        "requestedDates": "string[]"
+      },
+      "actions": [
+        "Generate request number (DR-YYYY-NNN)",
+        "Notify division engineer",
+        "Add to their inbox"
+      ]
+    },
+    "respond-division-request": {
+      "method": "PATCH",
+      "auth": "requested division engineer",
+      "body": {
+        "response": "accept | reject",
+        "responseNotes": "optional",
+        "assignedCrewId": "required if accept",
+        "assignedForemanId": "required if accept",
+        "confirmedDates": "required if accept"
+      },
+      "actions_on_accept": [
+        "Create calendar events for crew",
+        "Notify project owner",
+        "Create job entries"
+      ],
+      "actions_on_reject": [
+        "Notify project owner with reason",
+        "Update request status"
+      ]
+    },
+    "get-division-requests": {
+      "method": "GET",
+      "query_params": [
+        "direction (incoming | outgoing)",
+        "status",
+        "division",
+        "projectId"
+      ],
+      "response": "DivisionRequest[]"
+    },
+    "complete-division-request": {
+      "method": "PATCH",
+      "auth": "assigned foreman or division engineer",
+      "body": {
+        "qaPackId": "ID of submitted QA pack"
+      }
+    }
+  },
+  "success_criteria": [
+    "Full request workflow works end-to-end",
+    "Notifications sent at each step",
+    "Calendar events created on accept",
+    "QA pack linked on completion",
+    "Project view shows all division work"
+  ]
+}

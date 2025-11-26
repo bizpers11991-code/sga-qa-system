@@ -1,0 +1,100 @@
+{
+  "task_id": "PM_API_001",
+  "title": "Create Tender Handover API Endpoints",
+  "assigned_to": "deepseek",
+  "priority": "P1",
+  "phase": 1,
+  "estimated_hours": 6,
+  "description": "Create API endpoints for tender handover functionality",
+  "context": {
+    "existing_api_pattern": "api/create-job.ts",
+    "auth_lib": "api/_lib/auth.ts",
+    "sharepoint_lib": "api/_lib/sharepoint.ts"
+  },
+  "deliverables": [
+    {
+      "file": "api/create-handover.ts",
+      "description": "POST endpoint to create new tender handover"
+    },
+    {
+      "file": "api/get-handovers.ts",
+      "description": "GET endpoint to list handovers with filters"
+    },
+    {
+      "file": "api/get-handover.ts",
+      "description": "GET endpoint to get single handover details"
+    },
+    {
+      "file": "api/update-handover.ts",
+      "description": "PUT endpoint to update handover"
+    },
+    {
+      "file": "api/_lib/handoverHandler.ts",
+      "description": "Business logic for handover operations"
+    }
+  ],
+  "requirements": [
+    "Only tender_admin, scheduler_admin, management_admin can create handovers",
+    "Auto-generate handoverNumber (format: HO-YYYY-NNN)",
+    "Create SharePoint folder structure on handover creation",
+    "Send notification to project owner and scoping person",
+    "Create initial site visit calendar events based on client tier",
+    "Validation for required fields",
+    "Error handling with proper HTTP status codes"
+  ],
+  "api_specifications": {
+    "create-handover": {
+      "method": "POST",
+      "auth": ["tender_admin", "scheduler_admin", "management_admin"],
+      "body": "TenderHandover (without id, handoverNumber, dateCreated)",
+      "response": "{ success: true, handover: TenderHandover }"
+    },
+    "get-handovers": {
+      "method": "GET",
+      "auth": "any authenticated user",
+      "query_params": ["status", "clientTier", "projectOwnerId", "dateFrom", "dateTo"],
+      "response": "TenderHandover[]"
+    },
+    "get-handover": {
+      "method": "GET",
+      "auth": "any authenticated user",
+      "params": "id",
+      "response": "TenderHandover"
+    },
+    "update-handover": {
+      "method": "PUT",
+      "auth": ["tender_admin", "scheduler_admin", "management_admin", "assigned_project_owner"],
+      "params": "id",
+      "body": "Partial<TenderHandover>",
+      "response": "{ success: true, handover: TenderHandover }"
+    }
+  },
+  "site_visit_automation": {
+    "tier_1": {
+      "visits": 3,
+      "schedule": ["14 days before", "7 days before", "3 days before"]
+    },
+    "tier_2": {
+      "visits": 2,
+      "schedule": ["7 days before", "3 days before"]
+    },
+    "tier_3": {
+      "visits": 1,
+      "schedule": ["within 72 hours"]
+    }
+  },
+  "constraints": [
+    "Follow existing API patterns in the codebase",
+    "Use existing auth middleware",
+    "Use existing SharePoint integration",
+    "Proper TypeScript typing",
+    "Rate limiting on create endpoints"
+  ],
+  "success_criteria": [
+    "All endpoints return correct responses",
+    "Auth checks work correctly",
+    "SharePoint folders created",
+    "Notifications sent",
+    "Calendar events created"
+  ]
+}

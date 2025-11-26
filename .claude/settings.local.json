@@ -20,7 +20,8 @@
       "Bash(tee:*)",
       "Bash(npm audit:*)",
       "Bash(npm install:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
