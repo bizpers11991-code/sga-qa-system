@@ -1,5 +1,5 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { getTenders, createRecord, Tables } from './_lib/dataverse.js';
 import { TenderHandover } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -12,21 +12,6 @@ import {
   sendHandoverNotifications,
 } from './_lib/handoverHandler.js';
 
-const prepareObjectForRedis = (obj: Record<string, any>): Record<string, string> => {
-  const prepared: Record<string, string> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null) {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        prepared[key] = JSON.stringify(value);
-      } else {
-        prepared[key] = String(value);
-      }
-    }
-  }
-  return prepared;
-};
-
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
@@ -34,38 +19,48 @@ async function handler(
   const handoverData: Partial<TenderHandover> = request.body;
 
   try {
-    const redis = getRedisInstance();
-
     // Validate handover data
     validateHandover(handoverData);
 
     // Get all existing handovers to generate next number
-    const handoverKeys = await redis.smembers('handovers:index');
-    const existingHandovers: TenderHandover[] = [];
+    const existingHandovers = await getTenders();
 
-    for (const handoverId of handoverKeys) {
-      const handoverKey = `handover:${handoverId}`;
-      const handoverHash = await redis.hgetall(handoverKey);
+    // Generate handover number
+    const handoverNumber = generateHandoverNumber(existingHandovers as TenderHandover[]);
 
-      if (handoverHash && Object.keys(handoverHash).length > 0) {
-        const handover: Partial<TenderHandover> = {};
-        for (const [key, value] of Object.entries(handoverHash)) {
-          try {
-            handover[key as keyof TenderHandover] = JSON.parse(value as string);
-          } catch {
-            (handover as any)[key] = value;
-          }
-        }
-        existingHandovers.push(handover as TenderHandover);
-      }
-    }
+    // Prepare Dataverse record
+    const dataverseRecord = {
+      cr3cd_handovernumber: handoverNumber,
+      cr3cd_datecreated: new Date().toISOString(),
+      cr3cd_createdby: request.user.id,
+      cr3cd_clientid: handoverData.clientId!,
+      cr3cd_clientname: handoverData.clientName!,
+      cr3cd_clienttier: handoverData.clientTier!,
+      cr3cd_projectname: handoverData.projectName!,
+      cr3cd_projectdescription: handoverData.projectDescription!,
+      cr3cd_location: handoverData.location!,
+      cr3cd_estimatedstartdate: handoverData.estimatedStartDate!,
+      cr3cd_estimatedenddate: handoverData.estimatedEndDate!,
+      cr3cd_divisionsrequired: JSON.stringify(handoverData.divisionsRequired!),
+      cr3cd_projectownerid: handoverData.projectOwnerId!,
+      cr3cd_scopingpersonid: handoverData.scopingPersonId!,
+      cr3cd_estimatedarea: handoverData.estimatedArea || null,
+      cr3cd_estimatedthickness: handoverData.estimatedThickness || null,
+      cr3cd_asphaltplant: handoverData.asphaltPlant || null,
+      cr3cd_specialrequirements: handoverData.specialRequirements || null,
+      cr3cd_contractvalue: handoverData.contractValue || null,
+      cr3cd_contractnumber: handoverData.contractNumber || null,
+      cr3cd_purchaseordernumber: handoverData.purchaseOrderNumber || null,
+      cr3cd_attachments: JSON.stringify(handoverData.attachments || []),
+      cr3cd_status: handoverData.status || 'Draft',
+    };
 
-    // Generate handover number and create full handover object
-    const handoverNumber = generateHandoverNumber(existingHandovers);
-    const handoverId = `handover-${Date.now()}`;
+    // Create tender in Dataverse
+    const createdRecord = await createRecord(Tables.Tender, dataverseRecord);
 
+    // Build response object
     const completeHandover: TenderHandover = {
-      id: handoverId,
+      id: createdRecord.cr3cd_tenderid,
       handoverNumber,
       dateCreated: new Date().toISOString(),
       createdBy: request.user.id,
@@ -90,16 +85,6 @@ async function handler(
       attachments: handoverData.attachments || [],
       status: handoverData.status || 'Draft',
     };
-
-    // Store handover in Redis
-    const handoverKey = `handover:${handoverId}`;
-    const preparedHandover = prepareObjectForRedis(completeHandover);
-
-    const pipeline = redis.pipeline();
-    pipeline.hset(handoverKey, preparedHandover);
-    pipeline.sadd('handovers:index', handoverId);
-
-    await pipeline.exec();
 
     // Respond to user immediately
     response.status(201).json({

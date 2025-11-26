@@ -97,18 +97,26 @@ async function dataverseRequest(
  * Maps our friendly names to Dataverse entity names
  */
 export const Tables = {
-  Job: 'cr3cd_job',
-  Foreman: 'cr3cd_foreman',
-  QAPack: 'cr3cd_qapack',
-  DailyReport: 'cr3cd_dailyreport',
-  Incident: 'cr3cd_incident',
-  NCR: 'cr3cd_ncr',
-  SamplingPlan: 'cr3cd_samplingplan',
-  Resource: 'cr3cd_resource',
-  ITPTemplate: 'cr3cd_itptemplate',
-  SitePhoto: 'cr3cd_sitephoto',
-  AsphaltPlacement: 'cr3cd_asphaltplacement',
-  StraightEdgeReport: 'cr3cd_straightedgereport'
+  // Original QA System Tables
+  Job: 'cr3cd_jobs',
+  Foreman: 'cr3cd_foremans',
+  QAPack: 'cr3cd_qapacks',
+  DailyReport: 'cr3cd_dailyreports',
+  Incident: 'cr3cd_incidents',
+  NCR: 'cr3cd_ncrs',
+  SamplingPlan: 'cr3cd_samplingplans',
+  Resource: 'cr3cd_resources',
+  ITPTemplate: 'cr3cd_itptemplates',
+  SitePhoto: 'cr3cd_sitephotos',
+  AsphaltPlacement: 'cr3cd_asphaltplacements',
+  StraightEdgeReport: 'cr3cd_straightedgereports',
+
+  // New Project Management Tables
+  Tender: 'cr3cd_tenders',
+  Project: 'cr3cd_projects',
+  ScopeReport: 'cr3cd_scopereports',
+  DivisionRequest: 'cr3cd_divisionrequests',
+  CrewAvailability: 'cr3cd_crewavailabilities'
 };
 
 /**
@@ -267,6 +275,119 @@ export async function getRecentIncidents(days: number = 30): Promise<any[]> {
   );
 }
 
+// ========================================
+// PROJECT MANAGEMENT HELPER FUNCTIONS
+// ========================================
+
+/**
+ * Get all tenders with optional status filter
+ */
+export async function getTenders(status?: string): Promise<any[]> {
+  const filter = status ? `cr3cd_status eq '${status}'` : undefined;
+  return await getRecords(
+    Tables.Tender,
+    undefined,
+    filter,
+    'cr3cd_datecreated desc'
+  );
+}
+
+/**
+ * Get a single tender by ID
+ */
+export async function getTender(tenderId: string): Promise<any> {
+  return await getRecord(Tables.Tender, tenderId);
+}
+
+/**
+ * Get all projects with optional status filter
+ */
+export async function getProjects(status?: string): Promise<any[]> {
+  const filter = status ? `cr3cd_status eq '${status}'` : undefined;
+  return await getRecords(
+    Tables.Project,
+    undefined,
+    filter,
+    'cr3cd_datecreated desc'
+  );
+}
+
+/**
+ * Get a single project by ID
+ */
+export async function getProject(projectId: string): Promise<any> {
+  return await getRecord(Tables.Project, projectId);
+}
+
+/**
+ * Get all scope reports for a project
+ */
+export async function getScopeReportsByProject(projectId: string): Promise<any[]> {
+  return await getRecords(
+    Tables.ScopeReport,
+    undefined,
+    `_cr3cd_projectid_value eq '${projectId}'`,
+    'cr3cd_visitnumber asc'
+  );
+}
+
+/**
+ * Get all division requests with optional filters
+ */
+export async function getDivisionRequests(filters?: {
+  projectId?: string;
+  requestedDivision?: string;
+  requestingDivision?: string;
+  status?: string;
+}): Promise<any[]> {
+  const filterParts: string[] = [];
+
+  if (filters?.projectId) {
+    filterParts.push(`_cr3cd_projectid_value eq '${filters.projectId}'`);
+  }
+  if (filters?.requestedDivision) {
+    filterParts.push(`cr3cd_requesteddivision eq '${filters.requestedDivision}'`);
+  }
+  if (filters?.requestingDivision) {
+    filterParts.push(`cr3cd_requestingdivision eq '${filters.requestingdivision}'`);
+  }
+  if (filters?.status) {
+    filterParts.push(`cr3cd_status eq '${filters.status}'`);
+  }
+
+  const filter = filterParts.length > 0 ? filterParts.join(' and ') : undefined;
+
+  return await getRecords(
+    Tables.DivisionRequest,
+    undefined,
+    filter,
+    'cr3cd_requestdate desc'
+  );
+}
+
+/**
+ * Get crew availability by division
+ */
+export async function getCrewAvailability(division?: string, availableOnly: boolean = false): Promise<any[]> {
+  const filterParts: string[] = [];
+
+  if (division) {
+    filterParts.push(`cr3cd_division eq '${division}'`);
+  }
+  if (availableOnly) {
+    filterParts.push(`cr3cd_available eq true`);
+  }
+
+  const filter = filterParts.length > 0 ? filterParts.join(' and ') : undefined;
+
+  return await getRecords(
+    Tables.CrewAvailability,
+    undefined,
+    filter,
+    'cr3cd_crewname asc'
+  );
+}
+
 export default {
   Tables,
   getRecords,
@@ -275,7 +396,16 @@ export default {
   updateRecord,
   deleteRecord,
   fetchXML,
+  // Original helpers
   getJobsByForeman,
   getQAPacksByJob,
-  getRecentIncidents
+  getRecentIncidents,
+  // New project management helpers
+  getTenders,
+  getTender,
+  getProjects,
+  getProject,
+  getScopeReportsByProject,
+  getDivisionRequests,
+  getCrewAvailability
 };
