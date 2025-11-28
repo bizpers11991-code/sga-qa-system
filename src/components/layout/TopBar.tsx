@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { NotificationCenter } from '../notifications';
 
 interface TopBarProps {
   userName?: string;
@@ -73,6 +74,9 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Notification Center */}
+        <NotificationCenter />
+
         {/* User menu */}
         <div className="relative" ref={userMenuRef}>
           <button

@@ -21,7 +21,8 @@
       "Bash(npm audit:*)",
       "Bash(npm install:*)",
       "Bash(xargs:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

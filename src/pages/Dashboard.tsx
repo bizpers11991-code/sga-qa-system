@@ -7,6 +7,7 @@ import StatsCard from '../components/dashboard/StatsCard';
 import QuickActions from '../components/dashboard/QuickActions';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import DailyBriefing from '../components/dashboard/DailyBriefing';
+import { WeatherWidget } from '../components/weather';
 import {
   getDashboardStats,
   getDailyBriefing,
@@ -194,10 +195,25 @@ const Dashboard = () => {
         onRefresh={handleRefreshBriefing}
       />
 
-      {/* Quick Actions and Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <QuickActions />
+      {/* Weather and Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Weather Widget - takes 1/3 width on large screens */}
+        <div className="lg:col-span-1">
+          <WeatherWidget
+            showWorkSuitability={true}
+            expanded={false}
+            refreshInterval={30}
+          />
+        </div>
 
+        {/* Quick Actions - takes 2/3 width on large screens */}
+        <div className="lg:col-span-2">
+          <QuickActions />
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="mt-6">
         <RecentActivity
           activities={activities}
           loading={loadingActivity}

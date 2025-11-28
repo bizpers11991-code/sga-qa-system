@@ -1,5 +1,12 @@
+# SGA AI Team Dependencies
+# Core
 google-generativeai>=0.8.0
 openai>=1.0.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 rich>=13.0.0
+
+# For enhanced orchestrator
+aiohttp>=3.9.0
+httpx>=0.25.0
+tenacity>=8.2.0
