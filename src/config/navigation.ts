@@ -18,6 +18,13 @@ export const navigationItems: NavItem[] = [
     roles: 'all',
   },
   {
+    id: 'chat',
+    label: 'AI Assistant',
+    path: '/chat',
+    icon: 'chat-bubble',
+    roles: 'all',
+  },
+  {
     id: 'jobs',
     label: 'Jobs',
     path: '/jobs',
