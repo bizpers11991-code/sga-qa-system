@@ -113,14 +113,16 @@ function getWeatherInfo(code: number, isDay: boolean = true) {
 }
 
 /**
- * Fetch weather data from Open-Meteo BOM API
- * No API key required!
+ * Fetch weather data from Open-Meteo API
+ * No API key required! Uses global weather models for Australia.
  */
 export async function fetchWeather(
   latitude: number,
   longitude: number
 ): Promise<WeatherData> {
-  const baseUrl = 'https://api.open-meteo.com/v1/bom';
+  // Using standard forecast API instead of BOM-specific endpoint
+  // The BOM API (/v1/bom) returns null values for current weather
+  const baseUrl = 'https://api.open-meteo.com/v1/forecast';
   
   const params = new URLSearchParams({
     latitude: latitude.toString(),
