@@ -10,7 +10,7 @@
 
 import { Project, Job, FinalQaPack, ScopeReport, DivisionRequest, NonConformanceReport, IncidentReport, ProjectDivision } from '../../src/types';
 import { ValidationError } from './errors';
-import { JobsData, ScopeReportsData, QAPacksData, NCRsData, IncidentsData, DivisionRequestsData, ProjectsData } from './sharepointData';
+import { JobsData, ScopeReportsData, QAPacksData, NCRsData, IncidentsData, DivisionRequestsData, ProjectsData } from './sharepointData.js';
 
 /**
  * Generate next project number in format: PRJ-YYYY-NNN

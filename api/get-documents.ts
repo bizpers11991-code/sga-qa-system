@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { DocumentsData } from './_lib/sharepointData';
+import { DocumentsData } from './_lib/sharepointData.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { SpecificationDocument } from '../src/types';
+import { SpecificationDocument } from '../src/types.js';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {

@@ -1,7 +1,7 @@
 // api/get-sampling-plans.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SamplingPlansData } from './_lib/sharepointData';
-import { SamplingPlan } from '../src/types';
+import { SamplingPlansData } from './_lib/sharepointData.js';
+import { SamplingPlan } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 

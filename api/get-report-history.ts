@@ -1,7 +1,7 @@
 // api/get-report-history.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { QAPacksData } from './_lib/sharepointData.js';
-import { FinalQaPack, Role } from '../src/types';
+import { FinalQaPack, Role } from '../src/types.js';
 import { migrateReport } from './_lib/migration.js';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';

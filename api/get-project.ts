@@ -1,7 +1,7 @@
 import type { VercelResponse } from '@vercel/node';
-import { ProjectsData, JobsData, ScopeReportsData, DivisionRequestsData, QAPacksData, NCRsData, IncidentsData } from './_lib/sharepointData';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError } from './_lib/errors';
+import { ProjectsData, JobsData, ScopeReportsData, DivisionRequestsData, QAPacksData, NCRsData, IncidentsData } from './_lib/sharepointData.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError } from './_lib/errors.js';
 
 async function handler(
   request: AuthenticatedRequest,

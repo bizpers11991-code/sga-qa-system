@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { JobsData } from './_lib/sharepointData';
+import { JobsData } from './_lib/sharepointData.js';
 import { GoogleGenAI } from "@google/genai";
-import { Job, DailyJobSheetData, Role } from '../src/types';
+import { Job, DailyJobSheetData, Role } from '../src/types.js';
 import { sendErrorNotification } from './_lib/teams.js';
 import { getExpertSystemInstruction } from './_lib/prompts.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';

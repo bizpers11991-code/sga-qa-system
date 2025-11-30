@@ -1,6 +1,6 @@
 // api/get-daily-briefing.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { JobsData, DailyReportsData } from './_lib/sharepointData';
+import { JobsData, DailyReportsData } from './_lib/sharepointData.js';
 import { GoogleGenAI } from "@google/genai";
 import { Job } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';

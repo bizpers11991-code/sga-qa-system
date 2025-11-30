@@ -264,12 +264,17 @@ export interface CrewResource {
     name: string;
     division: 'Asphalt' | 'Profiling' | 'Spray' | 'Common';
     isForeman: boolean;
+    role?: string;
+    phone?: string;
+    email?: string;
 }
 export interface EquipmentResource {
     id: string; // Fleet ID
     name: string; // e.g., '2m Profiler'
     type: string; // e.g., 'Profiler'
     division: 'Asphalt' | 'Profiling' | 'Spray' | 'Common';
+    registrationNumber?: string;
+    status: 'Available' | 'In Use' | 'Maintenance';
 }
 
 export type ResourceType = 'Crew' | 'Equipment';

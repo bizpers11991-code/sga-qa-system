@@ -1,7 +1,7 @@
 import type { VercelResponse } from '@vercel/node';
-import { ScopeReportsData } from './_lib/sharepointData';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError } from './_lib/errors';
+import { ScopeReportsData } from './_lib/sharepointData.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError } from './_lib/errors.js';
 
 /**
  * Generate Scope Report PDF

@@ -1,7 +1,7 @@
 // api/update-report-status.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { QAPacksData } from './_lib/sharepointData.js';
-import { FinalQaPack, ReportStatus, Role } from '../src/types';
+import { FinalQaPack, ReportStatus, Role } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { migrateReport } from './_lib/migration.js';
 import { handleApiError } from './_lib/errors.js';

@@ -1,8 +1,8 @@
 import type { VercelResponse } from '@vercel/node';
-import { TendersData } from './_lib/sharepointData';
-import { TenderHandover } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError } from './_lib/errors';
+import { TendersData } from './_lib/sharepointData.js';
+import { TenderHandover } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError } from './_lib/errors.js';
 import {
   generateHandoverNumber,
   validateHandover,
@@ -10,7 +10,7 @@ import {
   calculateSiteVisitDates,
   createSiteVisitEvents,
   sendHandoverNotifications,
-} from './_lib/handoverHandler';
+} from './_lib/handoverHandler.js';
 
 async function handler(
   request: AuthenticatedRequest,

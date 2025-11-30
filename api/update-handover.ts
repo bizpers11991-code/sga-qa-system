@@ -1,9 +1,9 @@
 import type { VercelResponse } from '@vercel/node';
-import { TendersData } from './_lib/sharepointData';
-import { TenderHandover } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError, AuthorizationError } from './_lib/errors';
-import { validateHandover } from './_lib/handoverHandler';
+import { TendersData } from './_lib/sharepointData.js';
+import { TenderHandover } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError, AuthorizationError } from './_lib/errors.js';
+import { validateHandover } from './_lib/handoverHandler.js';
 
 async function handler(
   request: AuthenticatedRequest,

@@ -1,9 +1,9 @@
 import type { VercelResponse } from '@vercel/node';
-import { JobsData } from './_lib/sharepointData';
-import { Job } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { generateAndSendJobSheetPdf } from './_lib/jobSheetHandler';
-import { handleApiError } from './_lib/errors';
+import { JobsData } from './_lib/sharepointData.js';
+import { Job } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { generateAndSendJobSheetPdf } from './_lib/jobSheetHandler.js';
+import { handleApiError } from './_lib/errors.js';
 
 async function handler(
   request: AuthenticatedRequest,

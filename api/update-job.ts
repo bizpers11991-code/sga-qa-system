@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { JobsData } from './_lib/sharepointData';
-import { Job } from '../src/types';
+import { JobsData } from './_lib/sharepointData.js';
+import { Job } from '../src/types.js';
 import { LATEST_SCHEMA_VERSION } from './_lib/migration.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { generateAndSendJobSheetPdf } from './_lib/jobSheetHandler.js';

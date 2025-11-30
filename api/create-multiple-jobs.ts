@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { JobsData } from './_lib/sharepointData';
-import { Job } from '../src/types';
+import { JobsData } from './_lib/sharepointData.js';
+import { Job } from '../src/types.js';
 import { handleApiError } from './_lib/errors.js';
 
 export default async function handler(

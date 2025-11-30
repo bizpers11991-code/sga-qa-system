@@ -1,7 +1,7 @@
 // api/save-resource.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ResourcesData } from './_lib/sharepointData';
-import { CrewResource, EquipmentResource, ResourceType } from '../src/types';
+import { ResourcesData } from './_lib/sharepointData.js';
+import { CrewResource, EquipmentResource, ResourceType } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 

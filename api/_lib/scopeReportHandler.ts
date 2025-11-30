@@ -10,7 +10,7 @@
 
 import { ScopeReport, Project } from '../../src/types';
 import { ValidationError } from './errors';
-import { ProjectsData } from './sharepointData';
+import { ProjectsData } from './sharepointData.js';
 
 /**
  * Generate scope report number in format: SCR-YYYY-PNN-VV

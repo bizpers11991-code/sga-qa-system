@@ -1,7 +1,7 @@
 // api/delete-resource.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ResourcesData } from './_lib/sharepointData';
-import { ResourceType } from '../src/types';
+import { ResourcesData } from './_lib/sharepointData.js';
+import { ResourceType } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 

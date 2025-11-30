@@ -1,7 +1,7 @@
-import { DocumentsData } from './_lib/sharepointData';
+import { DocumentsData } from './_lib/sharepointData.js';
 import { getR2Config } from './_lib/r2.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { SpecificationDocument } from '../src/types';
+import { SpecificationDocument } from '../src/types.js';
 import type { VercelResponse } from '@vercel/node';
 import { handleApiError } from './_lib/errors.js';
 

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { QAPacksData } from './_lib/sharepointData';
+import { QAPacksData } from './_lib/sharepointData.js';
 import { GoogleGenAI } from "@google/genai";
-import { FinalQaPack, Role } from '../src/types';
+import { FinalQaPack, Role } from '../src/types.js';
 import { sendErrorNotification } from './_lib/teams.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';

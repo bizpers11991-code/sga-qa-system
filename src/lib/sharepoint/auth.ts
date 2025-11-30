@@ -39,20 +39,26 @@ const SHAREPOINT_SITES_SCOPE = (siteUrl: string): string => {
  * Validates SharePoint configuration from environment variables
  * Throws detailed errors if configuration is incomplete
  *
+ * Supports both AZURE_* and non-prefixed environment variable names for backward compatibility:
+ * - AZURE_TENANT_ID or TENANT_ID
+ * - AZURE_CLIENT_ID or CLIENT_ID
+ * - AZURE_CLIENT_SECRET or CLIENT_SECRET
+ *
  * @returns {SharePointConfig} Validated configuration object
  * @throws {SharePointApiError} If any required environment variable is missing
  */
 export function getSharePointConfig(): SharePointConfig {
   const siteUrl = process.env.SHAREPOINT_SITE_URL;
-  const tenantId = process.env.AZURE_TENANT_ID;
-  const clientId = process.env.AZURE_CLIENT_ID;
-  const clientSecret = process.env.AZURE_CLIENT_SECRET;
+  // Support both AZURE_* prefixed and non-prefixed variable names
+  const tenantId = process.env.AZURE_TENANT_ID || process.env.TENANT_ID;
+  const clientId = process.env.AZURE_CLIENT_ID || process.env.CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET || process.env.CLIENT_SECRET;
 
   const missing: string[] = [];
   if (!siteUrl) missing.push('SHAREPOINT_SITE_URL');
-  if (!tenantId) missing.push('AZURE_TENANT_ID');
-  if (!clientId) missing.push('AZURE_CLIENT_ID');
-  if (!clientSecret) missing.push('AZURE_CLIENT_SECRET');
+  if (!tenantId) missing.push('AZURE_TENANT_ID or TENANT_ID');
+  if (!clientId) missing.push('AZURE_CLIENT_ID or CLIENT_ID');
+  if (!clientSecret) missing.push('AZURE_CLIENT_SECRET or CLIENT_SECRET');
 
   if (missing.length > 0) {
     throw new SharePointApiError(

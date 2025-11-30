@@ -1,13 +1,13 @@
 import type { VercelResponse } from '@vercel/node';
-import { ProjectsData, TendersData } from './_lib/sharepointData';
-import { Project, TenderHandover } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError } from './_lib/errors';
+import { ProjectsData, TendersData } from './_lib/sharepointData.js';
+import { Project, TenderHandover } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError } from './_lib/errors.js';
 import {
   generateProjectNumber,
   validateProject,
   initializeDivisions,
-} from './_lib/projectHandler';
+} from './_lib/projectHandler.js';
 
 async function handler(
   request: AuthenticatedRequest,

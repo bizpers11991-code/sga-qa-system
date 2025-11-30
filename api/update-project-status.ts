@@ -1,8 +1,8 @@
 import type { VercelResponse } from '@vercel/node';
-import { ProjectsData } from './_lib/sharepointData';
-import { Project } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError, AuthorizationError, ValidationError } from './_lib/errors';
+import { ProjectsData } from './_lib/sharepointData.js';
+import { Project } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError, AuthorizationError, ValidationError } from './_lib/errors.js';
 
 async function handler(
   request: AuthenticatedRequest,

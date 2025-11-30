@@ -1,15 +1,15 @@
 import type { VercelResponse } from '@vercel/node';
-import { ScopeReportsData, ProjectsData } from './_lib/sharepointData';
-import { ScopeReport, Project } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError } from './_lib/errors';
+import { ScopeReportsData, ProjectsData } from './_lib/sharepointData.js';
+import { ScopeReport, Project } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError } from './_lib/errors.js';
 import {
   generateScopeReportNumber,
   validateScopeReport,
   updateProjectAfterScopeReport,
   sendScopeReportNotification,
   postScopeReportToTeams,
-} from './_lib/scopeReportHandler';
+} from './_lib/scopeReportHandler.js';
 
 async function handler(
   request: AuthenticatedRequest,

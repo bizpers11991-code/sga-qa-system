@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { DraftsData } from './_lib/sharepointData';
+import { DraftsData } from './_lib/sharepointData.js';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { Role } from '../src/types.js';

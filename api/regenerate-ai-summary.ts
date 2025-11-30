@@ -1,8 +1,8 @@
 // api/regenerate-ai-summary.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { QAPacksData } from './_lib/sharepointData';
+import { QAPacksData } from './_lib/sharepointData.js';
 import { generateReportSummary } from './_lib/copilot.js';
-import { FinalQaPack, Role } from '../src/types';
+import { FinalQaPack, Role } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { migrateReport } from './_lib/migration.js';
 import { handleApiError } from './_lib/errors.js';

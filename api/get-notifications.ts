@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { NotificationsData } from './_lib/sharepointData';
-import { AppNotification, Role } from '../src/types';
+import { NotificationsData } from './_lib/sharepointData.js';
+import { AppNotification, Role } from '../src/types.js';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 

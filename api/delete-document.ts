@@ -1,6 +1,6 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Config } from './_lib/r2.js';
-import { DocumentsData } from './_lib/sharepointData';
+import { DocumentsData } from './_lib/sharepointData.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import type { VercelResponse } from '@vercel/node';
 import { handleApiError } from './_lib/errors.js';

@@ -1,7 +1,7 @@
 // api/generate-jobsheet-pdf.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { JobsData } from './_lib/sharepointData.js';
-import { Job, Role } from '../src/types';
+import { Job, Role } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 import chromium from '@sparticuz/chromium';

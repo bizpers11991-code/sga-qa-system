@@ -1,14 +1,14 @@
 import type { VercelResponse } from '@vercel/node';
-import { DivisionRequestsData, ProjectsData } from './_lib/sharepointData';
-import { DivisionRequest } from '../src/types';
-import { withAuth, AuthenticatedRequest } from './_lib/auth';
-import { handleApiError, NotFoundError } from './_lib/errors';
+import { DivisionRequestsData, ProjectsData } from './_lib/sharepointData.js';
+import { DivisionRequest } from '../src/types.js';
+import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
+import { handleApiError, NotFoundError } from './_lib/errors.js';
 import {
   generateRequestNumber,
   validateDivisionRequest,
   getDefaultEngineerForDivision,
   notifyDivisionEngineer,
-} from './_lib/divisionRequestHandler';
+} from './_lib/divisionRequestHandler.js';
 
 async function handler(
   request: AuthenticatedRequest,
