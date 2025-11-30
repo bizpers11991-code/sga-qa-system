@@ -40,8 +40,14 @@ export interface ConfigStatus {
 
 /**
  * Get current configuration status for health checks
+ * Supports both AZURE_* prefixed and non-prefixed variable names
  */
 export function getConfigStatus(): ConfigStatus {
+  // Support both prefixed and non-prefixed variable names
+  const tenantId = process.env.AZURE_TENANT_ID || process.env.TENANT_ID;
+  const clientId = process.env.AZURE_CLIENT_ID || process.env.CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET || process.env.CLIENT_SECRET;
+
   const teamsWebhooks = [
     process.env.TEAMS_WEBHOOK_URL_SUMMARY,
     process.env.TEAMS_WEBHOOK_URL_QA_PACK,
@@ -57,20 +63,16 @@ export function getConfigStatus(): ConfigStatus {
     sharepoint: {
       configured: !!(
         process.env.SHAREPOINT_SITE_URL &&
-        process.env.TENANT_ID &&
-        process.env.CLIENT_ID &&
-        process.env.CLIENT_SECRET
+        tenantId &&
+        clientId &&
+        clientSecret
       ),
       siteUrl: process.env.SHAREPOINT_SITE_URL,
     },
     azure: {
-      configured: !!(
-        process.env.TENANT_ID &&
-        process.env.CLIENT_ID &&
-        process.env.CLIENT_SECRET
-      ),
-      tenantId: process.env.TENANT_ID ? '***configured***' : undefined,
-      clientId: process.env.CLIENT_ID ? '***configured***' : undefined,
+      configured: !!(tenantId && clientId && clientSecret),
+      tenantId: tenantId ? '***configured***' : undefined,
+      clientId: clientId ? '***configured***' : undefined,
     },
     azureOpenAI: {
       configured: !!(
@@ -145,9 +147,10 @@ export interface SharePointConfig {
 
 export function getSharePointConfig(): SharePointConfig | null {
   const siteUrl = process.env.SHAREPOINT_SITE_URL;
-  const tenantId = process.env.TENANT_ID;
-  const clientId = process.env.CLIENT_ID;
-  const clientSecret = process.env.CLIENT_SECRET;
+  // Support both AZURE_* prefixed and non-prefixed variable names
+  const tenantId = process.env.AZURE_TENANT_ID || process.env.TENANT_ID;
+  const clientId = process.env.AZURE_CLIENT_ID || process.env.CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET || process.env.CLIENT_SECRET;
 
   if (!siteUrl || !tenantId || !clientId || !clientSecret) return null;
 
