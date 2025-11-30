@@ -3,7 +3,7 @@
     "api/**/*.ts": {
       "memory": 1024,
       "maxDuration": 30,
-      "includeFiles": ["docs/**", "src/lib/**", "src/types/**", "src/types.ts"]
+      "includeFiles": "docs/**,src/lib/**,src/types/**,src/types.ts"
     }
   },
   "crons": [
