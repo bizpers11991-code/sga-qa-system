@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AsphaltPlacementData, AsphaltPlacementRow, AsphaltWeatherCondition, Job } from '../../types';
 import VoiceInput from '../common/VoiceInput';
+import { useWeatherForForm } from '@/context/WeatherContext';
+import {
+  validateDeliveryTemperature,
+  AsphaltMixTypes,
+  SPEC_REQUIREMENTS_SUMMARY,
+} from '@/lib/validation/mrwa-specs';
 
 interface AsphaltPlacementFormProps {
   initialData: AsphaltPlacementData;
@@ -28,6 +34,66 @@ const recalculateProgressiveTonnes = (placements: AsphaltPlacementRow[]): Asphal
 
 export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ initialData, onUpdate, job }) => {
   const [data, setData] = useState(initialData);
+
+  // Weather automation from BOM API
+  const {
+    weatherConditions,
+    loading: weatherLoading,
+    isWorkSuitable,
+    isPavementTempSuitable,
+    minPavementTemp,
+    windCategory,
+    warnings: weatherWarnings,
+    recommendations: weatherRecommendations,
+    refresh: refreshWeather,
+  } = useWeatherForForm();
+
+  // Detect mix type from material field for MRWA validation
+  const detectedMixType = useMemo(() => {
+    const material = data.material?.toLowerCase() || '';
+    if (material.includes('pmb') || material.includes('polymer')) {
+      return AsphaltMixTypes.DGA_PMB;
+    }
+    if (material.includes('warm')) {
+      return AsphaltMixTypes.WARM_MIX;
+    }
+    return AsphaltMixTypes.DGA_BITUMEN;
+  }, [data.material]);
+
+  // MRWA temperature requirements for current mix type
+  const tempRequirements = SPEC_REQUIREMENTS_SUMMARY.asphalt.deliveryTemp;
+
+  // Auto-populate weather from BOM API
+  const autoPopulateWeather = () => {
+    if (!weatherConditions) {
+      alert('Weather data not available. Please check your internet connection.');
+      return;
+    }
+
+    const currentTime = new Date().toTimeString().slice(0, 5);
+    const newWeatherRow: AsphaltWeatherCondition = {
+      time: currentTime,
+      airTemp: weatherConditions.temperature.toString(),
+      roadTemp: '', // Must be measured on-site with IR thermometer
+      windSpeed: `${weatherConditions.windSpeed} km/h ${weatherConditions.windDirection}`,
+      chillFactor: weatherConditions.conditions,
+      dayNight: new Date().getHours() >= 6 && new Date().getHours() < 18 ? 'Day' : 'Night',
+    };
+
+    setData((prev) => ({
+      ...prev,
+      weatherConditions: [...prev.weatherConditions, newWeatherRow],
+    }));
+  };
+
+  // Validate placement temperature against MRWA spec
+  const validatePlacementTemp = (temp: string): { valid: boolean; message: string } => {
+    const tempNum = parseFloat(temp);
+    if (isNaN(tempNum)) return { valid: true, message: '' };
+
+    const result = validateDeliveryTemperature(tempNum, detectedMixType);
+    return { valid: result.valid, message: result.message };
+  };
 
   useEffect(() => {
     onUpdate(data);
@@ -173,6 +239,7 @@ export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ init
         </div>
       </div>
 
+      {/* Header Fields - Per SGA-QA-FRM-003 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label htmlFor="lotNo" className={formStyles.label}>
@@ -191,6 +258,20 @@ export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ init
             value={data.sheetNo}
             onChange={handleChange}
             className={formStyles.input}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="material" className={formStyles.label}>
+            Material (Mix Type)
+          </label>
+          <input
+            id="material"
+            type="text"
+            name="material"
+            value={data.material}
+            onChange={handleChange}
+            className={formStyles.input}
+            placeholder="e.g., AC14 PMB, DG20"
           />
         </div>
       </div>
@@ -264,8 +345,95 @@ export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ init
         </div>
       </div>
 
+      {/* Weather Conditions - With BOM Auto-Fill and MRWA Compliance */}
       <div className="space-y-2">
-        <h4 className="font-semibold">Weather Conditions</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold">Weather Conditions</h4>
+          <div className="flex items-center gap-2">
+            {weatherLoading && (
+              <span className="text-sm text-gray-500">Loading BOM data...</span>
+            )}
+            <button
+              type="button"
+              onClick={autoPopulateWeather}
+              disabled={weatherLoading || !weatherConditions}
+              className="px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Auto-Fill from BOM
+            </button>
+            <button
+              type="button"
+              onClick={refreshWeather}
+              disabled={weatherLoading}
+              className="px-2 py-1 text-xs text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Weather Warnings Banner */}
+        {!isWorkSuitable && weatherWarnings.length > 0 && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-600 text-lg">⚠️</span>
+              <div>
+                <p className="font-semibold text-amber-800">Weather Alert - Review Before Paving</p>
+                <ul className="mt-1 text-sm text-amber-700 list-disc list-inside">
+                  {weatherWarnings.map((warning, i) => (
+                    <li key={i}>{warning}</li>
+                  ))}
+                </ul>
+                {weatherRecommendations.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-amber-200">
+                    <p className="text-xs font-medium text-amber-800">Recommendations:</p>
+                    <ul className="text-xs text-amber-600 list-disc list-inside">
+                      {weatherRecommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MRWA Temperature Requirements Display */}
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-semibold text-blue-800 text-sm">MRWA Spec 504 Temperature Requirements</p>
+              <p className="text-xs text-blue-700 mt-1">
+                Detected Mix: <span className="font-medium">{detectedMixType}</span> |
+                Required Delivery Temp: <span className="font-medium">
+                  {detectedMixType === AsphaltMixTypes.DGA_PMB ? tempRequirements.pmb :
+                   detectedMixType === AsphaltMixTypes.WARM_MIX ? tempRequirements.warmMix :
+                   tempRequirements.bitumen}
+                </span>
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Min Pavement Temp: <span className="font-medium">{minPavementTemp}°C</span> (Wind: {windCategory})
+              </p>
+            </div>
+            {weatherConditions && (
+              <div className="text-right">
+                <p className="text-xs text-blue-800 font-medium">Live BOM Weather</p>
+                <p className="text-sm text-blue-700">
+                  {weatherConditions.temperature}°C | {weatherConditions.windSpeed} km/h
+                </p>
+              </div>
+            )}
+          </div>
+          {!isPavementTempSuitable && (
+            <div className="mt-2 pt-2 border-t border-blue-200">
+              <p className="text-xs text-red-600 font-medium">
+                ⚠️ Current pavement temperature may be below minimum for PMB placement
+              </p>
+            </div>
+          )}
+        </div>
+
         {data.weatherConditions.map((row, index) => (
           <div key={index} className="grid items-end grid-cols-7 gap-2 p-2 bg-gray-50 border border-gray-200 rounded-md">
             <div className="col-span-6 grid grid-cols-6 gap-2">
@@ -561,8 +729,16 @@ export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ init
                   name="incomingTemp"
                   value={row.incomingTemp}
                   onChange={(e) => handleTableRowChange('placements', index, e)}
-                  className={formStyles.input}
+                  className={`${formStyles.input} ${
+                    row.incomingTemp && !validatePlacementTemp(row.incomingTemp).valid
+                      ? 'border-red-500 bg-red-50'
+                      : row.incomingTemp ? 'border-green-500 bg-green-50' : ''
+                  }`}
+                  title={row.incomingTemp ? validatePlacementTemp(row.incomingTemp).message : ''}
                 />
+                {row.incomingTemp && !validatePlacementTemp(row.incomingTemp).valid && (
+                  <p className="text-xs text-red-600 mt-1">Out of spec</p>
+                )}
               </div>
               <div>
                 <label htmlFor={`placementTemp-${index}`} className={formStyles.label}>
@@ -574,8 +750,16 @@ export const AsphaltPlacementForm: React.FC<AsphaltPlacementFormProps> = ({ init
                   name="placementTemp"
                   value={row.placementTemp}
                   onChange={(e) => handleTableRowChange('placements', index, e)}
-                  className={formStyles.input}
+                  className={`${formStyles.input} ${
+                    row.placementTemp && !validatePlacementTemp(row.placementTemp).valid
+                      ? 'border-red-500 bg-red-50'
+                      : row.placementTemp ? 'border-green-500 bg-green-50' : ''
+                  }`}
+                  title={row.placementTemp ? validatePlacementTemp(row.placementTemp).message : ''}
                 />
+                {row.placementTemp && !validatePlacementTemp(row.placementTemp).valid && (
+                  <p className="text-xs text-red-600 mt-1">Out of spec</p>
+                )}
               </div>
               <div>
                 <label htmlFor={`tempsCompliant-${index}`} className={formStyles.label}>

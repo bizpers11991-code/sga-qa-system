@@ -8,9 +8,9 @@
  * - Notifications and Teams integration
  */
 
-import { ScopeReport, Project } from '../../src/types.js';
-import { ValidationError } from './errors.js';
-import { getRedisInstance } from './redis.js';
+import { ScopeReport, Project } from '../../src/types';
+import { ValidationError } from './errors';
+import { ProjectsData } from './sharepointData';
 
 /**
  * Generate scope report number in format: SCR-YYYY-PNN-VV
@@ -115,39 +115,27 @@ export const updateProjectAfterScopeReport = async (
   reportId: string
 ): Promise<void> => {
   try {
-    const redis = getRedisInstance();
+    // Fetch project from SharePoint
+    const project = await ProjectsData.getById(projectId);
 
-    // Fetch project
-    const projectKey = `project:${projectId}`;
-    const projectHash = await redis.hgetall(projectKey);
-
-    if (!projectHash || Object.keys(projectHash).length === 0) {
+    if (!project) {
       console.error(`Project ${projectId} not found`);
       return;
     }
 
-    // Parse project
-    const project: Partial<Project> = {};
-    for (const [key, value] of Object.entries(projectHash)) {
-      try {
-        project[key as keyof Project] = JSON.parse(value as string);
-      } catch {
-        (project as any)[key] = value;
-      }
-    }
-
     // Add report ID to project
-    const scopeReportIds = (project as Project).scopeReportIds || [];
+    const scopeReportIds = project.scopeReportIds || [];
     if (!scopeReportIds.includes(reportId)) {
       scopeReportIds.push(reportId);
-      await redis.hset(projectKey, 'scopeReportIds', JSON.stringify(scopeReportIds));
-    }
 
-    // Update project status if currently in "Scoping"
-    if ((project as Project).status === 'Scoping') {
-      // Check if all required scope reports are completed
-      // For simplicity, move to "Scheduled" after first report
-      await redis.hset(projectKey, 'status', 'Scheduled');
+      const updates: Partial<Project> = { scopeReportIds };
+
+      // Update project status if currently in "Scoping"
+      if (project.status === 'Scoping') {
+        updates.status = 'Scheduled';
+      }
+
+      await ProjectsData.update(projectId, updates);
     }
 
   } catch (error) {

@@ -1,8 +1,18 @@
 // api/_lib/auth0.ts
 import { ManagementClient } from 'auth0';
-import { getRedisInstance } from './redis.js';
 
 let managementClient: ManagementClient | null = null;
+
+/**
+ * In-memory token cache
+ * Tokens are cached per function instance (resets on cold start)
+ */
+interface TokenCache {
+  token: string;
+  expiresAt: number;
+}
+
+let tokenCache: TokenCache | null = null;
 
 /**
  * Returns a singleton instance of the Auth0 Management Client.
@@ -25,7 +35,7 @@ export const getAuth0ManagementClient = async (): Promise<ManagementClient> => {
         const errorMessage = `AUTH0_CONFIGURATION_ERROR: The following required server-side environment variables are missing: ${missingVars.join(', ')}. ` +
             "Please add these to your Vercel project settings. These must be the credentials for your Auth0 'Machine-to-Machine (M2M)' application, not the frontend 'Single Page Application (SPA)'. " +
             "Refer to the README.md for detailed setup instructions.";
-        
+
         throw new Error(errorMessage);
     }
 
@@ -34,27 +44,24 @@ export const getAuth0ManagementClient = async (): Promise<ManagementClient> => {
         clientId: AUTH0_CLIENT_ID,
         clientSecret: AUTH0_CLIENT_SECRET,
     });
-    
+
     return managementClient;
 };
 
-const TOKEN_CACHE_KEY = 'auth0:management-api-token';
-
 /**
  * Fetches and caches an Auth0 Management API token.
- * This function communicates directly with the /oauth/token endpoint.
+ * Uses in-memory caching (resets on cold start).
  * @returns A promise that resolves to a valid access token.
  */
 export const getManagementApiToken = async (): Promise<string> => {
-    const redis = getRedisInstance();
+    const now = Date.now();
 
-    // 1. Try to get token from cache
-    const cachedToken = await redis.get<string>(TOKEN_CACHE_KEY);
-    if (cachedToken) {
-        return cachedToken;
+    // Check if we have a valid cached token
+    if (tokenCache && tokenCache.expiresAt > now) {
+        return tokenCache.token;
     }
 
-    // 2. If not in cache, fetch a new one
+    // Fetch a new token
     const { AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET } = process.env;
     if (!AUTH0_DOMAIN || !AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
         throw new Error('AUTH0_CONFIGURATION_ERROR: M2M credentials are not set for token fetch.');
@@ -81,9 +88,12 @@ export const getManagementApiToken = async (): Promise<string> => {
         throw new Error('Could not authenticate with Auth0 Management API.');
     }
 
-    // 3. Cache the new token with an expiry (expires_in seconds, minus a 60s buffer)
+    // Cache the new token with an expiry (expires_in seconds, minus a 60s buffer)
     const expiresIn = data.expires_in ? data.expires_in - 60 : 3600; // Default to 1 hour
-    await redis.set(TOKEN_CACHE_KEY, data.access_token, { ex: expiresIn });
+    tokenCache = {
+        token: data.access_token,
+        expiresAt: now + (expiresIn * 1000),
+    };
 
     return data.access_token;
 };

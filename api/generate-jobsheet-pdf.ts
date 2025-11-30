@@ -1,6 +1,6 @@
 // api/generate-jobsheet-pdf.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { JobsData } from './_lib/sharepointData.js';
 import { Job, Role } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -9,8 +9,6 @@ import puppeteer from 'puppeteer-core';
 import ReactDOMServer from 'react-dom/server';
 import React from 'react';
 import JobSheetPrintView from './_lib/JobSheetPrintView.js';
-import { hydrateObjectFromRedisHash } from './_lib/utils.js';
-import { migrateJob, migrateJobSheet } from './_lib/migration.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     const { jobId } = req.query;
@@ -20,17 +18,10 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
     let browser = null;
     try {
-        const redis = getRedisInstance();
-
-        const jobDataRedis = await redis.hgetall(`job:${jobId}`);
-        if (!jobDataRedis) {
+        // Fetch job from SharePoint
+        const job = await JobsData.getById(jobId);
+        if (!job) {
             return res.status(404).json({ message: 'Job not found.' });
-        }
-        const job: Job = migrateJob(hydrateObjectFromRedisHash(jobDataRedis));
-        
-        const jobSheetDataRedis = await redis.hgetall(`jobsheet:${jobId}`);
-        if (jobSheetDataRedis && Object.keys(jobSheetDataRedis).length > 0) {
-            job.jobSheetData = migrateJobSheet(hydrateObjectFromRedisHash(jobSheetDataRedis));
         }
 
         if (!job.jobSheetData) {

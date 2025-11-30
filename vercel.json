@@ -2,10 +2,29 @@
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,
-      "maxDuration": 10
+      "maxDuration": 30,
+      "includeFiles": ["docs/**", "src/lib/**", "src/types/**", "src/types.ts"]
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/send-morning-lookahead",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/send-midday-update",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/send-evening-summary",
+      "schedule": "0 8 * * *"
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
@@ -26,6 +45,10 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     },

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisClient } from './_lib/redis.js';
+import { ResourcesData, JobsData } from './_lib/sharepointData.js';
 
 /**
  * POST /api/assign-crew-to-job

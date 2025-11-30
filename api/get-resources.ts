@@ -1,6 +1,6 @@
 // api/get-resources.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ResourcesData } from './_lib/sharepointData';
 import { CrewResource, EquipmentResource, Role } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -33,22 +33,28 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     try {
-        const redis = getRedisInstance();
+        // Get all resources from SharePoint
+        const allResources = await ResourcesData.getAll();
 
-        // Check if resources are already populated
-        const crewExists = await redis.exists('resources:crew');
-        if (!crewExists) {
-            const pipeline = redis.pipeline();
-            initialCrew.forEach(c => pipeline.hset('resources:crew', { [c.id]: JSON.stringify(c) }));
-            initialEquipment.forEach(e => pipeline.hset('resources:equipment', { [e.id]: JSON.stringify(e) }));
-            await pipeline.exec();
+        // Check if resources need initial population
+        if (allResources.length === 0) {
+            // Populate with initial data
+            const promises = [
+                ...initialCrew.map(c => ResourcesData.create({ ...c, resourceType: 'Crew' })),
+                ...initialEquipment.map(e => ResourcesData.create({ ...e, resourceType: 'Equipment' }))
+            ];
+            await Promise.all(promises);
+
+            // Fetch again after population
+            const resources = await ResourcesData.getAll();
+            const crew = resources.filter((r: any) => r.resourceType === 'Crew').sort((a: any, b: any) => a.name.localeCompare(b.name));
+            const equipment = resources.filter((r: any) => r.resourceType === 'Equipment').sort((a: any, b: any) => a.id.localeCompare(b.id));
+            return res.status(200).json({ crew, equipment });
         }
 
-        const crewData = await redis.hvals('resources:crew');
-        const equipmentData = await redis.hvals('resources:equipment');
-
-        const crew = crewData.map((c: any) => (typeof c === 'string' ? JSON.parse(c) : c)).sort((a: CrewResource, b: CrewResource) => a.name.localeCompare(b.name));
-        const equipment = equipmentData.map((e: any) => (typeof e === 'string' ? JSON.parse(e) : e)).sort((a: EquipmentResource, b: EquipmentResource) => a.id.localeCompare(b.id));
+        // Separate crew and equipment
+        const crew = allResources.filter((r: any) => r.resourceType === 'Crew').sort((a: any, b: any) => a.name.localeCompare(b.name));
+        const equipment = allResources.filter((r: any) => r.resourceType === 'Equipment').sort((a: any, b: any) => a.id.localeCompare(b.id));
 
         res.status(200).json({ crew, equipment });
     } catch (error: any) {

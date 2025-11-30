@@ -287,6 +287,10 @@ export interface SgaDailyReportData {
     correctorDetails: SgaCorrectorRow[];
     siteInstructions: string;
     additionalComments: string;
+    // SGA Representative sign-off - Per SGA-QA-FRM-007
+    sgaSignName: string;
+    sgaSignature: string; // base64
+    // Client sign-off
     clientSignName: string;
     clientSignature: string; // base64
     plantEquipment: { type: string; supplier: string; plantId: string; prestart: string; startTime: string; endTime: string; hours: string; comments: string; }[];
@@ -365,6 +369,7 @@ export interface AsphaltPlacementData {
     date: string;
     lotNo: string;
     sheetNo: string;
+    material: string;  // Added per SGA-QA-FRM-003 - Mix Type/Material
     pavementSurfaceCondition: 'Dry' | 'Damp' | 'Wet' | '';
     rainfallDuringShift: 'Yes' | 'No' | '';
     rainfallActions: string;
@@ -382,11 +387,14 @@ export interface StraightEdgeRow {
 }
 export interface StraightEdgeData {
     lotNo: string;
+    date: string;           // Added per SGA-QA-FRM-005
+    location: string;       // Added per SGA-QA-FRM-005
     mixType: string;
     testedBy: string;
     straightEdgeId: string;
     tests: StraightEdgeRow[];
     supervisor: string;
+    supervisorSignature: string;  // Added per SGA-QA-FRM-005
 }
 
 export interface SpraySealRun {
@@ -445,6 +453,95 @@ export interface TrafficManagementPlanChecklistData {
 }
 
 
+// ITR - INSPECTION AND TEST REPORTS
+// Per SGA-QA-ITR-002 Asphalt Laying
+
+export interface ItrHoldPointSignOff {
+    sga: boolean;
+    dti?: boolean;
+    ghd?: boolean;
+    rtio?: boolean;
+    client?: boolean;
+}
+
+export interface ItrInspectionItem {
+    id: string;
+    itemNo: number;
+    description: string;
+    acceptanceCriteria: string;
+    status: 'Yes' | 'No' | 'N/A' | '';
+    holdPointSignOff: ItrHoldPointSignOff;
+    comments: string;
+}
+
+export interface ItrSignOff {
+    name: string;
+    position: string;
+    signature: string; // base64
+    date: string;
+}
+
+export interface ItrAsphaltLayingData {
+    // Project Details
+    projectName: string;
+    client: string;
+    description: string;
+    projectDocNo: string;
+    dateLaid: string;
+    lotNumber: string;
+    workArea: string;
+    chainage: string;
+    // Inspection Items (12 items per SGA-QA-ITR-002)
+    inspectionItems: ItrInspectionItem[];
+    // General Comments
+    comments: string;
+    // Sign Off
+    sgaRepresentative: ItrSignOff;
+    clientRepresentative: ItrSignOff;
+}
+
+// ITP - INSPECTION AND TEST PLANS
+// Per SGA-ITP-001, SGA-ITP-002, etc.
+
+export type TestPointType = 'V' | 'W' | 'H'; // Visual, Witness, Hold Point
+export type RoleKey = 'SS' | 'PE' | 'QA'; // Site Supervisor, Project Engineer, QA
+
+export interface ItpActivityItem {
+    id: string;
+    itemNo: number;
+    activity: string;
+    acceptanceCriteria: string;
+    verifyingDocument: string;
+    frequency: string;
+    testPoint: TestPointType;
+    roleKey: RoleKey;
+    recordOfConformity: string;
+    clientSignature: string; // base64
+    sgaSignature: string; // base64
+    comments: string;
+}
+
+export interface ItpFormData {
+    // Header
+    client: string;
+    project: string;
+    specifications: string;
+    lotNo: string;
+    lotDescription: string;
+    preparedBy: string;
+    approvedBy: string;
+    documentNumber: string;
+    revision: string;
+    date: string;
+    // Activity Items
+    activities: ItpActivityItem[];
+    // Final Inspection
+    finalInspectionComplete: boolean;
+    finalInspectionDate: string;
+    finalInspectorSignature: string; // base64
+    finalInspectorName: string;
+}
+
 // QA PACK
 export interface QaPack {
     sgaDailyReport: SgaDailyReportData;
@@ -455,6 +552,8 @@ export interface QaPack {
     sprayReport?: SprayReportData;
     preStartChecklist?: PreStartChecklistData;
     trafficManagementPlan?: TrafficManagementPlanChecklistData;
+    itrAsphaltLaying?: ItrAsphaltLayingData;  // Added ITR
+    itpForm?: ItpFormData;  // Added ITP
     sitePhotos: SitePhoto[];
     damagePhotos: DamagePhoto[];
     lastUpdated: string;
@@ -589,4 +688,4 @@ export interface WeatherData {
  * Export all types from the Project Management module
  * Includes: Tender Administration, Project Management, Scope Reports, Division Requests
  */
-export * from './types/project-management';
+export * from './types/project-management.js';

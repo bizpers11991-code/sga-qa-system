@@ -21,8 +21,8 @@
  * - Notifications
  */
 
-import { createListService, SharePointListService } from '../../src/lib/sharepoint/lists';
-import type { SharePointListItem, SharePointQueryOptions } from '../../src/lib/sharepoint/types';
+import { createListService, SharePointListService } from '../../src/lib/sharepoint/lists.js';
+import type { SharePointListItem, SharePointQueryOptions } from '../../src/lib/sharepoint/types.js';
 import type {
   Job,
   Project,

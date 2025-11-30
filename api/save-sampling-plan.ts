@@ -1,28 +1,32 @@
 // api/save-sampling-plan.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { SamplingPlansData } from './_lib/sharepointData';
 import { SamplingPlan } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     try {
-        const redis = getRedisInstance();
         const planData: SamplingPlan = req.body;
 
         if (!planData.id || !planData.jobNo || !planData.lotNo) {
             return res.status(400).json({ message: 'Plan ID, Job No, and Lot No are required.' });
         }
 
-        const key = `sampling-plan:${planData.id}`;
-        
-        const pipeline = redis.pipeline();
-        pipeline.set(key, JSON.stringify(planData));
-        pipeline.sadd('sampling-plans:index', planData.id);
-        
-        await pipeline.exec();
-        
-        res.status(200).json({ message: 'Sampling plan saved successfully.', plan: planData });
+        // Check if plan exists to determine update vs create
+        const existingPlan = await SamplingPlansData.getById(planData.id);
+
+        let savedPlan;
+        if (existingPlan) {
+            // Update existing plan
+            savedPlan = await SamplingPlansData.update(planData.id, planData);
+        } else {
+            // Create new plan
+            const { id, ...planWithoutId } = planData;
+            savedPlan = await SamplingPlansData.create(planWithoutId);
+        }
+
+        res.status(200).json({ message: 'Sampling plan saved successfully.', plan: savedPlan });
 
     } catch (error: any) {
         await handleApiError({

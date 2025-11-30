@@ -1,10 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { DraftsData } from './_lib/sharepointData';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { Role } from '../src/types.js';
-
-const DRAFT_EXPIRATION_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 async function handler(
   request: AuthenticatedRequest,
@@ -16,21 +14,35 @@ async function handler(
 
   const { jobId, foremanId, draft } = request.body;
   try {
-    const redis = getRedisInstance();
-
     if (!jobId || !foremanId || !draft) {
       return response.status(400).json({ message: 'Job ID, Foreman ID, and draft data are required.' });
     }
-    
+
     // Security: A foreman can only save drafts for themselves.
     if (request.user.id !== foremanId) {
         return response.status(403).json({ message: 'Forbidden: You can only save your own drafts.' });
     }
 
-    const draftKey = `draft:${jobId}:${foremanId}`;
-    
-    // Set the draft in Redis with an expiration
-    await redis.set(draftKey, JSON.stringify(draft), { ex: DRAFT_EXPIRATION_SECONDS });
+    // Check if draft already exists
+    const existingDrafts = await DraftsData.getAll(`JobId eq '${jobId}' and ForemanId eq '${foremanId}'`);
+
+    if (existingDrafts.length > 0) {
+      // Update existing draft
+      await DraftsData.update(existingDrafts[0].id!, {
+        jobId,
+        foremanId,
+        draftData: draft,
+        lastModified: new Date().toISOString(),
+      });
+    } else {
+      // Create new draft
+      await DraftsData.create({
+        jobId,
+        foremanId,
+        draftData: draft,
+        lastModified: new Date().toISOString(),
+      });
+    }
 
     return response.status(200).json({ message: 'Draft saved successfully.' });
 

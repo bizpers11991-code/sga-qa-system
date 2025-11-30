@@ -8,9 +8,9 @@
  * - Data aggregation from jobs, QA packs, scope reports
  */
 
-import { Project, Job, FinalQaPack, ScopeReport, DivisionRequest, NonConformanceReport, IncidentReport, ProjectDivision } from '../../src/types.js';
-import { ValidationError } from './errors.js';
-import { getRedisInstance } from './redis.js';
+import { Project, Job, FinalQaPack, ScopeReport, DivisionRequest, NonConformanceReport, IncidentReport, ProjectDivision } from '../../src/types';
+import { ValidationError } from './errors';
+import { JobsData, ScopeReportsData, QAPacksData, NCRsData, IncidentsData, DivisionRequestsData, ProjectsData } from './sharepointData';
 
 /**
  * Generate next project number in format: PRJ-YYYY-NNN
@@ -209,141 +209,23 @@ export const fetchProjectDetails = async (project: Project): Promise<{
   incidents: IncidentReport[];
   divisionRequests: DivisionRequest[];
 }> => {
-  const redis = getRedisInstance();
-
-  // Fetch jobs
-  const jobs: Job[] = [];
-  for (const jobId of project.jobIds) {
-    const jobKey = `job:${jobId}`;
-    const jobHash = await redis.hgetall(jobKey);
-
-    if (jobHash && Object.keys(jobHash).length > 0) {
-      const job: Partial<Job> = {};
-      for (const [key, value] of Object.entries(jobHash)) {
-        try {
-          job[key as keyof Job] = JSON.parse(value as string);
-        } catch {
-          (job as any)[key] = value;
-        }
-      }
-      jobs.push(job as Job);
-    }
-  }
-
-  // Fetch scope reports
-  const scopeReports: ScopeReport[] = [];
-  for (const reportId of project.scopeReportIds) {
-    const reportKey = `scopereport:${reportId}`;
-    const reportHash = await redis.hgetall(reportKey);
-
-    if (reportHash && Object.keys(reportHash).length > 0) {
-      const report: Partial<ScopeReport> = {};
-      for (const [key, value] of Object.entries(reportHash)) {
-        try {
-          report[key as keyof ScopeReport] = JSON.parse(value as string);
-        } catch {
-          (report as any)[key] = value;
-        }
-      }
-      scopeReports.push(report as ScopeReport);
-    }
-  }
-
-  // Fetch QA packs
-  const qaPacks: FinalQaPack[] = [];
-  if (project.qaPackIds) {
-    for (const qaPackId of project.qaPackIds) {
-      const qaPackKey = `qapack:${qaPackId}`;
-      const qaPackHash = await redis.hgetall(qaPackKey);
-
-      if (qaPackHash && Object.keys(qaPackHash).length > 0) {
-        const qaPack: Partial<FinalQaPack> = {};
-        for (const [key, value] of Object.entries(qaPackHash)) {
-          try {
-            qaPack[key as keyof FinalQaPack] = JSON.parse(value as string);
-          } catch {
-            (qaPack as any)[key] = value;
-          }
-        }
-        qaPacks.push(qaPack as FinalQaPack);
-      }
-    }
-  }
-
-  // Fetch NCRs
-  const ncrs: NonConformanceReport[] = [];
-  if (project.ncrIds) {
-    for (const ncrId of project.ncrIds) {
-      const ncrKey = `ncr:${ncrId}`;
-      const ncrHash = await redis.hgetall(ncrKey);
-
-      if (ncrHash && Object.keys(ncrHash).length > 0) {
-        const ncr: Partial<NonConformanceReport> = {};
-        for (const [key, value] of Object.entries(ncrHash)) {
-          try {
-            ncr[key as keyof NonConformanceReport] = JSON.parse(value as string);
-          } catch {
-            (ncr as any)[key] = value;
-          }
-        }
-        ncrs.push(ncr as NonConformanceReport);
-      }
-    }
-  }
-
-  // Fetch incidents
-  const incidents: IncidentReport[] = [];
-  if (project.incidentIds) {
-    for (const incidentId of project.incidentIds) {
-      const incidentKey = `incident:${incidentId}`;
-      const incidentHash = await redis.hgetall(incidentKey);
-
-      if (incidentHash && Object.keys(incidentHash).length > 0) {
-        const incident: Partial<IncidentReport> = {};
-        for (const [key, value] of Object.entries(incidentHash)) {
-          try {
-            incident[key as keyof IncidentReport] = JSON.parse(value as string);
-          } catch {
-            (incident as any)[key] = value;
-          }
-        }
-        incidents.push(incident as IncidentReport);
-      }
-    }
-  }
-
-  // Fetch division requests
-  const divisionRequests: DivisionRequest[] = [];
-  const allRequestIds = await redis.smembers('divisionrequests:index');
-
-  for (const requestId of allRequestIds) {
-    const requestKey = `divisionrequest:${requestId}`;
-    const requestHash = await redis.hgetall(requestKey);
-
-    if (requestHash && Object.keys(requestHash).length > 0) {
-      const request: Partial<DivisionRequest> = {};
-      for (const [key, value] of Object.entries(requestHash)) {
-        try {
-          request[key as keyof DivisionRequest] = JSON.parse(value as string);
-        } catch {
-          (request as any)[key] = value;
-        }
-      }
-
-      // Only include requests for this project
-      if ((request as DivisionRequest).projectId === project.id) {
-        divisionRequests.push(request as DivisionRequest);
-      }
-    }
-  }
+  // Fetch all data in parallel from SharePoint
+  const [jobs, scopeReports, qaPacks, ncrs, incidents, divisionRequests] = await Promise.all([
+    JobsData.getAll({ projectId: project.id }),
+    ScopeReportsData.getAll(project.id),
+    QAPacksData.getAll(`ProjectId eq '${project.id}'`),
+    NCRsData.getAll(`ProjectId eq '${project.id}'`),
+    IncidentsData.getAll(`ProjectId eq '${project.id}'`),
+    DivisionRequestsData.getAll({ projectId: project.id }),
+  ]);
 
   return {
-    jobs,
-    scopeReports,
-    qaPacks,
-    ncrs,
-    incidents,
-    divisionRequests,
+    jobs: jobs as Job[],
+    scopeReports: scopeReports as ScopeReport[],
+    qaPacks: qaPacks as FinalQaPack[],
+    ncrs: ncrs as NonConformanceReport[],
+    incidents: incidents as IncidentReport[],
+    divisionRequests: divisionRequests as DivisionRequest[],
   };
 };
 
@@ -352,33 +234,18 @@ export const fetchProjectDetails = async (project: Project): Promise<{
  */
 export const linkJobToProject = async (jobId: string, projectId: string): Promise<boolean> => {
   try {
-    const redis = getRedisInstance();
+    // Get project from SharePoint
+    const project = await ProjectsData.getById(projectId);
 
-    // Get project
-    const projectKey = `project:${projectId}`;
-    const projectHash = await redis.hgetall(projectKey);
-
-    if (!projectHash || Object.keys(projectHash).length === 0) {
+    if (!project) {
       return false;
     }
 
-    // Parse project
-    const project: Partial<Project> = {};
-    for (const [key, value] of Object.entries(projectHash)) {
-      try {
-        project[key as keyof Project] = JSON.parse(value as string);
-      } catch {
-        (project as any)[key] = value;
-      }
-    }
-
     // Add job ID if not already present
-    const jobIds = (project as Project).jobIds || [];
+    const jobIds = project.jobIds || [];
     if (!jobIds.includes(jobId)) {
       jobIds.push(jobId);
-
-      // Update project
-      await redis.hset(projectKey, 'jobIds', JSON.stringify(jobIds));
+      await ProjectsData.update(projectId, { jobIds });
     }
 
     return true;

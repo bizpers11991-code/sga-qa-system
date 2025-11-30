@@ -1,10 +1,8 @@
 // api/get-daily-briefing.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { JobsData, DailyReportsData } from './_lib/sharepointData';
 import { GoogleGenAI } from "@google/genai";
 import { Job } from '../src/types.js';
-import { hydrateObjectFromRedisHash } from './_lib/utils.js';
-import { migrateJob } from './_lib/migration.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
@@ -44,57 +42,51 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     const today = getTodayPerth();
-    const cacheKey = `briefing:${foremanId}:${today}`;
 
     try {
-        const redis = getRedisInstance();
-        
-        // Check cache first
-        const cachedBriefing = await redis.get(cacheKey);
-        if (cachedBriefing) {
-            return res.status(200).json({ summary: cachedBriefing });
+        // Check cache first in DailyReports SharePoint list
+        const cachedBriefings = await DailyReportsData.getAll(`ForemanId eq '${foremanId}' and BriefingDate eq '${today}'`);
+
+        if (cachedBriefings.length > 0) {
+            return res.status(200).json({ summary: cachedBriefings[0].summary });
         }
 
         // --- If not cached, generate a new briefing ---
-        const [jobIds, weather] = await Promise.all([
-            redis.smembers('jobs:index'),
+        const [allJobs, weather] = await Promise.all([
+            JobsData.getAll({ foremanId }),
             getWeatherForecast()
         ]);
-        
-        if (jobIds.length === 0) {
-            const noJobsSummary = "You have no jobs scheduled for today. Enjoy the quiet day or check with your scheduler for any updates.";
-            return res.status(200).json({ summary: noJobsSummary });
-        }
-        
-        const pipeline = redis.pipeline();
-        jobIds.forEach(id => pipeline.hgetall(`job:${id}`));
-        const results = await pipeline.exec<Record<string, string>[]>();
-        
-        const foremanJobsToday = results
-            .filter((jobData): jobData is Record<string, string> => jobData !== null)
-            .map(jobData => migrateJob(hydrateObjectFromRedisHash(jobData)) as Job)
-            .filter(job => job.foremanId === foremanId && job.jobDate === today);
+
+        // Filter jobs for today
+        const foremanJobsToday = allJobs.filter(job => job.jobDate === today);
 
         if (foremanJobsToday.length === 0) {
             const noJobsSummary = "You have no jobs scheduled for today. Enjoy the quiet day or check with your scheduler for any updates.";
-             await redis.set(cacheKey, noJobsSummary, { ex: 3600 * 12 }); // Cache for 12 hours
+
+            // Cache the no-jobs summary
+            await DailyReportsData.create({
+                foremanId,
+                briefingDate: today,
+                summary: noJobsSummary,
+            });
+
             return res.status(200).json({ summary: noJobsSummary });
         }
 
-        const jobDetails = foremanJobsToday.map(job => 
+        const jobDetails = foremanJobsToday.map(job =>
             `- **${job.jobNo} (${job.client})**: A ${job.division} job at ${job.location}. Project: ${job.projectName}.`
         ).join('\n');
-        
+
         const prompt = `
             You are a helpful and concise operations assistant for SGA. Your task is to provide a personalized morning briefing for a foreman. Be friendly and professional.
-            
+
             **Foreman:** ${req.user.name}
             **Date:** ${today}
             **Weather Forecast:** ${weather}
-            
+
             **Scheduled Jobs for Today:**
             ${jobDetails}
-            
+
             **Instruction:**
             Based on the information above, write a brief, easy-to-read summary of the foreman's day. Start with a greeting. Mention the number of jobs. For each job, briefly state the client and location. Incorporate the weather forecast as a practical tip (e.g., "watch for afternoon showers"). Keep it under 100 words.
         `;
@@ -105,12 +97,13 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         });
 
         const summary = result.text ?? "Could not generate a daily briefing.";
-        
-        // Cache the result until the end of the day
-        const now = new Date();
-        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-        const ttl = Math.floor((endOfDay.getTime() - now.getTime()) / 1000);
-        await redis.set(cacheKey, summary, { ex: ttl > 0 ? ttl : 3600 }); // Cache for at least 1 hr if calculation is off
+
+        // Cache the result in SharePoint
+        await DailyReportsData.create({
+            foremanId,
+            briefingDate: today,
+            summary,
+        });
 
         res.status(200).json({ summary });
 

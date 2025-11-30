@@ -13,7 +13,7 @@ import { Buffer } from 'buffer';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Config } from './_lib/r2.js';
-import { getRedisInstance } from './_lib/redis.js';
+import { IncidentsData } from './_lib/sharepointData.js';
 import { IncidentReport, IncidentPhoto } from '../src/types.js';
 import { sendErrorNotification, sendIncidentNotification } from './_lib/teams.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
@@ -56,18 +56,21 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         if (!isAdmin && report.reporterId !== user.id) {
             return res.status(403).json({ message: 'Forbidden: You can only submit reports for yourself.' });
         }
-        
+
         const r2 = getR2Config();
-        const redis = getRedisInstance();
-        
-        const id = `inc-${Date.now()}`;
+
+        // Generate sequential incident counter from SharePoint
         const year = new Date().getFullYear();
-        const incidentCount = await redis.incr(`incident:counter:${year}`);
+        const allIncidents = await IncidentsData.getAll() as IncidentReport[];
+        const currentYearIncidents = allIncidents.filter(inc =>
+            inc.reportId && inc.reportId.startsWith(`SGA-${year}-Incident-`)
+        );
+        const incidentCount = currentYearIncidents.length + 1;
+
         const reportId = `SGA-${year}-Incident-${String(incidentCount).padStart(3, '0')}`;
 
-        report.id = id;
         report.reportId = reportId;
-        
+
         // Initialize sign-off status for the new workflow
         report.hseqSignOff = { isSigned: false };
         report.adminSignOff = { isSigned: false };
@@ -87,20 +90,17 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
         // Clean up base64 data before saving to DB
         if (report.photos) report.photos = [];
-        
+
         const fullReport = report as IncidentReport;
-        
-        const key = `incident:${id}`;
-        const pipeline = redis.pipeline();
-        pipeline.set(key, JSON.stringify(fullReport));
-        pipeline.sadd('incidents:index', id);
-        await pipeline.exec();
-        
+
+        // Save to SharePoint
+        const created = await IncidentsData.create(fullReport) as IncidentReport;
+
         // Respond to user first
-        res.status(201).json({ message: 'Incident report submitted successfully.', report: fullReport });
-        
+        res.status(201).json({ message: 'Incident report submitted successfully.', report: created });
+
         // Send notification in the background
-        await sendIncidentNotification(fullReport);
+        await sendIncidentNotification(created);
         
     } catch (error: any) {
         await handleApiError({

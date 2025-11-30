@@ -1,17 +1,11 @@
 // api/cron/send-midday-update.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from '../_lib/redis.js';
+import { JobsData, DraftsData } from '../_lib/sharepointData.js';
 import { GoogleGenAI } from "@google/genai";
 import { Job, QaPack } from '../../types.js';
 import { sendManagementUpdate } from '../_lib/teams.js';
-import { hydrateObjectFromRedisHash } from '../_lib/utils.js';
-import { migrateJob } from '../_lib/migration.js';
 import { getExpertSystemInstruction } from '../_lib/prompts.js';
 import { handleApiError } from '../_lib/errors.js';
-
-// NOTE: This serverless function CANNOT use the client-side encryption service.
-// A shared secret or different encryption strategy would be needed if drafts were encrypted at rest.
-// For now, we assume drafts in Redis are NOT encrypted for this server-side analysis.
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -37,47 +31,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const redis = getRedisInstance();
         const today = getTodayPerth();
         const { report } = req.query;
         const title = getReportTitle(report);
 
         // 1. Get all jobs for today
-        const jobIds = await redis.smembers('jobs:index');
-        const jobPipeline = redis.pipeline();
-        jobIds.forEach(id => jobPipeline.hgetall(`job:${id}`));
-        const jobResults = await jobPipeline.exec<Record<string, string>[]>();
-        
-        const todaysJobs = jobResults
-            .filter((jobData): jobData is Record<string, string> => jobData !== null)
-            .map(jobData => migrateJob(hydrateObjectFromRedisHash(jobData)) as Job)
-            .filter(job => job.jobDate === today);
+        const allJobs = await JobsData.getAll();
+        const todaysJobs = allJobs.filter(job => job.jobDate === today);
 
         if (todaysJobs.length === 0) {
             return res.status(200).json({ message: 'No active jobs for today to report on.' });
         }
 
-        // 2. Get all drafts for today's jobs
-        const draftPipeline = redis.pipeline();
-        todaysJobs.forEach(job => draftPipeline.get(`draft:${job.id}:${job.foremanId}`));
-        const draftResults = await draftPipeline.exec<string[]>();
+        // 2. Get all drafts from SharePoint
+        const allDrafts = await DraftsData.getAll();
 
         // 3. Process drafts and prepare context for AI
         let progressDetails = '';
         let jobsWithProgress = 0;
 
-        for (let i = 0; i < todaysJobs.length; i++) {
-            const job = todaysJobs[i];
-            const draftJson = draftResults[i];
+        for (const job of todaysJobs) {
+            // Find draft for this job and foreman
+            const draftItem = allDrafts.find(d =>
+                d.jobId === job.id && d.foremanId === job.foremanId
+            );
 
-            if (!draftJson) {
+            if (!draftItem || !draftItem.data) {
                 progressDetails += `\n- **${job.jobNo} (${job.client})**: No draft data available yet. Crew may not have started.`;
                 continue;
             }
 
             try {
-                // Here we would decrypt if drafts were encrypted
-                const draft: QaPack = JSON.parse(draftJson);
+                // Parse draft data
+                const draft: QaPack = typeof draftItem.data === 'string' ? JSON.parse(draftItem.data) : draftItem.data;
                 jobsWithProgress++;
 
                 let metrics = '';
@@ -98,8 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 progressDetails += `\n- **${job.jobNo} (${job.client})**: ${metrics} Issues: ${issues}. Photos Added: ${photos}.`;
 
             } catch (e) {
-                 progressDetails += `\n- **${job.jobNo} (${job.client})**: Could not parse draft data.`;
-                 console.error(`Failed to parse draft for job ${job.jobNo}`, e);
+                progressDetails += `\n- **${job.jobNo} (${job.client})**: Could not parse draft data.`;
+                console.error(`Failed to parse draft for job ${job.jobNo}`, e);
             }
         }
 

@@ -3,14 +3,14 @@
  * Business Logic Flow: Incident Report PDF Generation
  * 1.  An authenticated user requests a PDF for a specific incident.
  * 2.  The system verifies the user has permission to view the requested report.
- * 3.  The incident data is fetched from the database (Redis).
+ * 3.  The incident data is fetched from SharePoint.
  * 4.  The data is rendered into an HTML print view using a React component.
  * 5.  A headless browser (Puppeteer) converts the HTML into a PDF document.
  * 6.  The PDF is named according to the standardized format (e.g., SGA-2025-Incident-001.pdf).
  * 7.  The generated PDF is streamed directly to the user for download.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { IncidentsData } from './_lib/sharepointData.js';
 import { IncidentReport, SecureForeman } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -32,15 +32,13 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
     let browser = null;
     try {
-        const redis = getRedisInstance();
         const { user } = req;
 
-        // Fetch incident data
-        const incidentJson = await redis.get(`incident:${incidentId}`);
-        if (!incidentJson) {
+        // Fetch incident from SharePoint
+        const incident = await IncidentsData.getById(incidentId);
+        if (!incident) {
             return res.status(404).json({ message: 'Incident report not found.' });
         }
-        const incident: IncidentReport = JSON.parse(incidentJson as string);
 
         // Authorization check: User must be an admin/manager OR the original reporter
         const isAdmin = ['asphalt_engineer', 'profiling_engineer', 'spray_admin', 'management_admin', 'hseq_manager'].includes(user.role);

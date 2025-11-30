@@ -1,9 +1,11 @@
 // api/_lib/auth.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Role, SecureForeman } from '../../src/types.js';
-import { getRedisInstance } from './redis.js';
+import { Role, SecureForeman } from '../../src/types';
 
 const USER_CACHE_TTL_SECONDS = 300; // 5 minutes
+
+// In-memory cache for user profiles (simple alternative to Redis)
+const userProfileCache = new Map<string, { user: SecureForeman; expiresAt: number }>();
 
 export type AuthenticatedRequest = VercelRequest & {
   user: SecureForeman;
@@ -26,6 +28,31 @@ const mapAuth0UserToForeman = (user: any): SecureForeman | null => {
   };
 };
 
+/**
+ * Get user from cache
+ */
+const getCachedUser = (token: string): SecureForeman | null => {
+  const cached = userProfileCache.get(token);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.user;
+  }
+  // Clean up expired entry
+  if (cached) {
+    userProfileCache.delete(token);
+  }
+  return null;
+};
+
+/**
+ * Set user in cache
+ */
+const setCachedUser = (token: string, user: SecureForeman): void => {
+  userProfileCache.set(token, {
+    user,
+    expiresAt: Date.now() + USER_CACHE_TTL_SECONDS * 1000,
+  });
+};
+
 export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]) => {
   return async (req: VercelRequest, res: VercelResponse) => {
     // TEMPORARY: Bypass auth ENTIRELY for development/testing
@@ -42,7 +69,7 @@ export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]
     };
     return handler(req as AuthenticatedRequest, res);
 
-    // DISABLED AUTH CODE BELOW - Will be re-enabled when Auth0 is configured
+    // PRODUCTION AUTH CODE BELOW - Will be re-enabled when Auth0 is configured
     /*
     const authHeader = req.headers.authorization;
 
@@ -51,8 +78,6 @@ export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]
     }
 
     const token = authHeader.split(' ')[1];
-    // FIX: Server-side code must use server-side environment variables.
-    // VITE_ variables are only exposed to the client. Changed to AUTH0_DOMAIN.
     const auth0Domain = process.env.AUTH0_DOMAIN;
 
     if (!auth0Domain) {
@@ -61,16 +86,9 @@ export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]
     }
 
     try {
-      const redis = getRedisInstance();
-      const cacheKey = `user-profile:${token}`;
-      
-      // 1. Check cache first
-      const cachedUserJson = await redis.get(cacheKey);
-      if (cachedUserJson) {
-          const cachedUser = (typeof cachedUserJson === 'string') 
-            ? JSON.parse(cachedUserJson) 
-            : cachedUserJson as SecureForeman;
-            
+      // 1. Check in-memory cache first
+      const cachedUser = getCachedUser(token);
+      if (cachedUser) {
           if (requiredRoles.length > 0 && !requiredRoles.includes(cachedUser.role)) {
               return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
           }
@@ -96,13 +114,13 @@ export const withAuth = (handler: AuthenticatedApiHandler, requiredRoles: Role[]
         return res.status(403).json({ message: 'Forbidden: User profile is incomplete or is not assigned a valid role in Auth0.' });
       }
 
-      // 3. Cache the user profile in Redis
-      await redis.set(cacheKey, JSON.stringify(foreman), { ex: USER_CACHE_TTL_SECONDS });
-      
+      // 3. Cache the user profile in memory
+      setCachedUser(token, foreman);
+
       if (requiredRoles.length > 0 && !requiredRoles.includes(foreman.role)) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
       }
-      
+
       // Attach user to the request and call the actual handler
       (req as AuthenticatedRequest).user = foreman;
       return handler(req as AuthenticatedRequest, res);

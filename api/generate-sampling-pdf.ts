@@ -1,6 +1,6 @@
 // api/generate-sampling-pdf.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { SamplingPlansData } from './_lib/sharepointData.js';
 import { SamplingPlan } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -18,13 +18,11 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
     let browser = null;
     try {
-        const redis = getRedisInstance();
-        
-        const planJson = await redis.get(`sampling-plan:${planId}`);
-        if (!planJson) {
+        // Fetch sampling plan from SharePoint
+        const plan = await SamplingPlansData.getById(planId);
+        if (!plan) {
             return res.status(404).json({ message: 'Sampling plan not found.' });
         }
-        const plan: SamplingPlan = JSON.parse(planJson as string);
 
         const reportHtml = ReactDOMServer.renderToStaticMarkup(React.createElement(SamplingPlanPrintView, { plan }));
         const fullHtml = `<!DOCTYPE html><html><head><title>Sampling Plan - ${plan.jobNo}</title><meta charset="utf-8" /></head><body>${reportHtml}</body></html>`;

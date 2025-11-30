@@ -1,8 +1,7 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { ScopeReport } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError, NotFoundError } from './_lib/errors.js';
+import { ScopeReportsData } from './_lib/sharepointData';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError, NotFoundError } from './_lib/errors';
 
 /**
  * Generate Scope Report PDF
@@ -16,8 +15,6 @@ async function handler(
   response: VercelResponse
 ) {
   try {
-    const redis = getRedisInstance();
-
     // Get scope report ID from query parameter
     const { id } = request.query;
 
@@ -25,22 +22,11 @@ async function handler(
       throw new NotFoundError('Scope Report', { providedId: id });
     }
 
-    // Fetch scope report from Redis
-    const reportKey = `scopereport:${id}`;
-    const reportHash = await redis.hgetall(reportKey);
+    // Fetch scope report from SharePoint
+    const report = await ScopeReportsData.getById(id);
 
-    if (!reportHash || Object.keys(reportHash).length === 0) {
+    if (!report) {
       throw new NotFoundError('Scope Report', { reportId: id });
-    }
-
-    // Reconstruct scope report object
-    const report: Partial<ScopeReport> = {};
-    for (const [key, value] of Object.entries(reportHash)) {
-      try {
-        report[key as keyof ScopeReport] = JSON.parse(value as string);
-      } catch {
-        (report as any)[key] = value;
-      }
     }
 
     // TODO: Implement PDF generation using puppeteer
@@ -50,11 +36,11 @@ async function handler(
     // 3. Return PDF binary
 
     // For now, return a placeholder response
-    console.log(`PDF generation requested for scope report ${(report as ScopeReport).reportNumber}`);
+    console.log(`PDF generation requested for scope report ${report.reportNumber}`);
 
     return response.status(501).json({
       message: 'PDF generation not yet implemented',
-      reportNumber: (report as ScopeReport).reportNumber,
+      reportNumber: report.reportNumber,
       reportId: id,
       note: 'Will be implemented similar to generate-jobsheet-pdf.ts',
     });

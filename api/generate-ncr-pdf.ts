@@ -2,14 +2,14 @@
 /**
  * Business Logic Flow: NCR PDF Generation
  * 1.  An authenticated Admin requests a PDF for a specific NCR.
- * 2.  The NCR data is fetched from the database (Redis).
+ * 2.  The NCR data is fetched from SharePoint.
  * 3.  The data is rendered into an HTML print view using a React component.
  * 4.  A headless browser (Puppeteer) converts the HTML into a PDF document.
  * 5.  The PDF is named according to the standardized format (e.g., SGA-2025-NCR-001.pdf).
  * 6.  The generated PDF is streamed directly to the user for download.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { NCRsData } from './_lib/sharepointData.js';
 import { NonConformanceReport, Role } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -27,13 +27,11 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
     let browser = null;
     try {
-        const redis = getRedisInstance();
-        
-        const ncrJson = await redis.get(`ncr:${ncrId}`);
-        if (!ncrJson) {
+        // Fetch NCR from SharePoint
+        const ncr = await NCRsData.getById(ncrId);
+        if (!ncr) {
             return res.status(404).json({ message: 'NCR not found.' });
         }
-        const ncr: NonConformanceReport = JSON.parse(ncrJson as string);
 
         const reportHtml = ReactDOMServer.renderToStaticMarkup(React.createElement(NcrPrintView, { report: ncr }));
         const fullHtml = `<!DOCTYPE html><html><head><title>NCR - ${ncr.ncrId}</title><meta charset="utf-8" /></head><body>${reportHtml}</body></html>`;

@@ -1,6 +1,6 @@
 // api/update-report-status.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { QAPacksData } from './_lib/sharepointData.js';
 import { FinalQaPack, ReportStatus, Role } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { migrateReport } from './_lib/migration.js';
@@ -26,44 +26,34 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'jobNo, version, status, and updatedBy are required.' });
         }
 
-        const redis = getRedisInstance();
-        const historyKey = `history:${jobNo}`;
-        
-        const length = await redis.llen(historyKey);
-        // Version history is stored with the newest (highest version number) at index 0.
-        // So, version N is at index 0, N-1 is at index 1, etc.
-        // The index for a given version `v` is `length - v`.
-        const indexToUpdate = length - version;
+        // Get all reports for this job from SharePoint
+        const allReports = await QAPacksData.getAll(`JobNo eq '${jobNo}'`) as FinalQaPack[];
 
-        if (indexToUpdate < 0 || indexToUpdate >= length) {
-            return res.status(404).json({ message: `Report version ${version} not found in history of length ${length}.` });
+        if (allReports.length === 0) {
+            return res.status(404).json({ message: `No reports found for job ${jobNo}.` });
         }
 
-        const reportJson = await redis.lindex(historyKey, indexToUpdate);
-        if (!reportJson) {
-             return res.status(404).json({ message: 'Report version data is missing or corrupt.' });
-        }
-        
-        let report: FinalQaPack = migrateReport(JSON.parse(reportJson as string));
-        
-        // Ensure the version number matches what we expect
-        if (report.version !== version) {
-             console.error(`Version mismatch! Expected ${version}, found ${report.version} at index ${indexToUpdate}.`);
-             // Try to find the correct index as a fallback
-             const allReportsJson = await redis.lrange(historyKey, 0, -1);
-             const correctIndex = allReportsJson.findIndex(r => JSON.parse(r).version === version);
-             if (correctIndex !== -1) {
-                 report = migrateReport(JSON.parse(allReportsJson[correctIndex]));
-                 await redis.lset(historyKey, correctIndex, JSON.stringify({ ...report, status, internalNotes }));
-                 return res.status(200).json({ message: 'Report status updated successfully (with index correction).', report });
-             }
-             return res.status(409).json({ message: 'Version mismatch conflict. Data may be out of sync.' });
+        // Find the specific version
+        const reportToUpdate = allReports.find(r => r.version === version);
+
+        if (!reportToUpdate) {
+            return res.status(404).json({ message: `Report version ${version} not found for job ${jobNo}.` });
         }
 
+        if (!reportToUpdate.id) {
+            return res.status(500).json({ message: 'Report ID is missing.' });
+        }
+
+        // Migrate and update the report
+        let report: FinalQaPack = migrateReport(reportToUpdate);
         report.status = status;
         report.internalNotes = internalNotes;
 
-        await redis.lset(historyKey, indexToUpdate, JSON.stringify(report));
+        // Update in SharePoint
+        await QAPacksData.update(reportToUpdate.id, {
+            status,
+            internalNotes
+        } as any);
 
         res.status(200).json({ message: 'Report status updated successfully.', report });
     } catch (error: any) {

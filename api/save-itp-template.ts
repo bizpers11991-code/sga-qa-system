@@ -1,19 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ITPTemplatesData } from './_lib/sharepointData';
 import { ItpChecklistData } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     try {
-        const redis = getRedisInstance();
         const templateData: ItpChecklistData = req.body;
 
         if (!templateData.id || !templateData.name) {
             return res.status(400).json({ message: 'Template ID and name are required.' });
         }
 
-        await redis.hset('itp_templates', { [templateData.id]: JSON.stringify(templateData) });
+        // Check if template exists
+        const existingTemplate = await ITPTemplatesData.getById(templateData.id);
+
+        if (existingTemplate) {
+            // Update existing template
+            await ITPTemplatesData.update(templateData.id, templateData);
+        } else {
+            // Create new template
+            await ITPTemplatesData.create(templateData);
+        }
 
         res.status(200).json({ message: 'Template saved successfully.', template: templateData });
 

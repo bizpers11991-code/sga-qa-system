@@ -1,6 +1,6 @@
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Config } from './_lib/r2.js';
-import { getRedisInstance } from './_lib/redis.js';
+import { DocumentsData } from './_lib/sharepointData';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import type { VercelResponse } from '@vercel/node';
 import { handleApiError } from './_lib/errors.js';
@@ -27,13 +27,9 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         // bypasses the incorrect type check and allows the code to compile.
         await (r2.client as any).send(command);
 
-        // 2. Delete metadata from Redis
-        const redis = getRedisInstance();
-        const pipeline = redis.pipeline();
-        pipeline.del(`document:${id}`);
-        pipeline.srem('documents:index', id);
-        await pipeline.exec();
-        
+        // 2. Delete metadata from SharePoint
+        await DocumentsData.delete(id);
+
         res.status(200).json({ message: 'Document deleted successfully.' });
 
     } catch (error: any) {

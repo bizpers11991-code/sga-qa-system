@@ -1,83 +1,73 @@
 // api/_lib/ratelimit.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Ratelimit } from '@upstash/ratelimit';
-import { getRedisInstance } from './redis.js';
 import { SecureForeman } from '../../src/types.js';
 
 /**
- * Rate Limiter Configuration
+ * Rate Limiter Configuration (In-Memory Fallback)
  *
- * This module provides tiered rate limiting to protect the API from abuse:
- * - Anonymous/IP-based: 10 requests per minute (for unauthenticated endpoints)
- * - Authenticated users: 100 requests per minute
- * - Expensive operations (AI, PDF generation): 5 requests per minute
- * - Cron jobs: Unlimited (bypassed via CRON_SECRET header)
+ * This module provides tiered rate limiting to protect the API from abuse.
+ * Uses in-memory storage when Redis is not configured.
+ *
+ * Note: In-memory rate limiting resets on function cold starts.
+ * For production with high traffic, configure Upstash Redis.
  */
 
-// Different rate limiters for different tiers
-let anonymousRateLimiter: Ratelimit | null = null;
-let authenticatedRateLimiter: Ratelimit | null = null;
-let expensiveOperationRateLimiter: Ratelimit | null = null;
+// In-memory rate limit storage
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
 
-/**
- * Get or create the anonymous rate limiter (IP-based)
- * 10 requests per minute per IP
- */
-export const getAnonymousRateLimiter = (): Ratelimit => {
-  if (anonymousRateLimiter) {
-    return anonymousRateLimiter;
-  }
+const rateLimitStore = new Map<string, RateLimitEntry>();
 
-  const redis = getRedisInstance();
-  anonymousRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(10, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:anonymous',
-  });
-
-  return anonymousRateLimiter;
+// Rate limit configurations
+const RATE_LIMITS = {
+  anonymous: { limit: 10, windowMs: 60000 }, // 10 req/min
+  authenticated: { limit: 100, windowMs: 60000 }, // 100 req/min
+  expensive: { limit: 5, windowMs: 60000 }, // 5 req/min
+  burst: { limit: 20, windowMs: 10000 }, // 20 req/10sec
 };
 
 /**
- * Get or create the authenticated user rate limiter
- * 100 requests per minute per user
+ * Check rate limit using in-memory storage
  */
-export const getAuthenticatedRateLimiter = (): Ratelimit => {
-  if (authenticatedRateLimiter) {
-    return authenticatedRateLimiter;
+const checkRateLimit = (
+  identifier: string,
+  limit: number,
+  windowMs: number
+): { success: boolean; remaining: number; reset: number } => {
+  const now = Date.now();
+  const entry = rateLimitStore.get(identifier);
+
+  if (!entry || now > entry.resetTime) {
+    // Create new entry
+    const resetTime = now + windowMs;
+    rateLimitStore.set(identifier, { count: 1, resetTime });
+    return { success: true, remaining: limit - 1, reset: resetTime };
   }
 
-  const redis = getRedisInstance();
-  authenticatedRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(100, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:authenticated',
-  });
+  if (entry.count >= limit) {
+    return { success: false, remaining: 0, reset: entry.resetTime };
+  }
 
-  return authenticatedRateLimiter;
+  entry.count++;
+  return { success: true, remaining: limit - entry.count, reset: entry.resetTime };
 };
 
 /**
- * Get or create the expensive operation rate limiter
- * 5 requests per minute per user (for AI-powered and PDF generation endpoints)
+ * Clean up expired entries periodically
  */
-export const getExpensiveOperationRateLimiter = (): Ratelimit => {
-  if (expensiveOperationRateLimiter) {
-    return expensiveOperationRateLimiter;
+const cleanupExpiredEntries = () => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitStore.delete(key);
+    }
   }
-
-  const redis = getRedisInstance();
-  expensiveOperationRateLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:expensive',
-  });
-
-  return expensiveOperationRateLimiter;
 };
+
+// Run cleanup every minute
+setInterval(cleanupExpiredEntries, 60000);
 
 /**
  * Extract client identifier from request
@@ -112,12 +102,6 @@ export const isCronRequest = (req: VercelRequest): boolean => {
 /**
  * Apply rate limiting to a request
  * Returns true if request should be allowed, false if rate limited
- *
- * @param req The Vercel request object
- * @param res The Vercel response object (to send 429 if rate limited)
- * @param user Optional authenticated user
- * @param isExpensiveOperation Whether this is an expensive operation (AI/PDF)
- * @returns true if allowed, false if rate limited
  */
 export const applyRateLimit = async (
   req: VercelRequest,
@@ -132,53 +116,48 @@ export const applyRateLimit = async (
 
   const identifier = getClientIdentifier(req, user);
 
-  // Select appropriate rate limiter
-  let rateLimiter: Ratelimit;
+  // Select appropriate rate limit config
+  let config = RATE_LIMITS.authenticated;
+  let prefix = 'auth';
+
   if (isExpensiveOperation) {
-    rateLimiter = getExpensiveOperationRateLimiter();
-  } else if (user) {
-    rateLimiter = getAuthenticatedRateLimiter();
-  } else {
-    rateLimiter = getAnonymousRateLimiter();
+    config = RATE_LIMITS.expensive;
+    prefix = 'exp';
+  } else if (!user) {
+    config = RATE_LIMITS.anonymous;
+    prefix = 'anon';
   }
 
-  try {
-    const { success, limit, reset, remaining } = await rateLimiter.limit(identifier);
+  const key = `${prefix}:${identifier}`;
+  const { success, remaining, reset } = checkRateLimit(key, config.limit, config.windowMs);
 
-    // Add rate limit headers to response
-    res.setHeader('X-RateLimit-Limit', limit.toString());
-    res.setHeader('X-RateLimit-Remaining', remaining.toString());
-    res.setHeader('X-RateLimit-Reset', reset.toString());
+  // Add rate limit headers to response
+  res.setHeader('X-RateLimit-Limit', config.limit.toString());
+  res.setHeader('X-RateLimit-Remaining', remaining.toString());
+  res.setHeader('X-RateLimit-Reset', reset.toString());
 
-    if (!success) {
-      const retryAfter = Math.ceil((reset - Date.now()) / 1000);
-      res.setHeader('Retry-After', retryAfter.toString());
+  if (!success) {
+    const retryAfter = Math.ceil((reset - Date.now()) / 1000);
+    res.setHeader('Retry-After', retryAfter.toString());
 
-      res.status(429).json({
-        error: 'Rate limit exceeded',
-        code: 'RATE_LIMIT_EXCEEDED',
-        details: {
-          limit,
-          retryAfter,
-          message: `Too many requests. Please try again in ${retryAfter} seconds.`,
-        },
-      });
+    res.status(429).json({
+      error: 'Rate limit exceeded',
+      code: 'RATE_LIMIT_EXCEEDED',
+      details: {
+        limit: config.limit,
+        retryAfter,
+        message: `Too many requests. Please try again in ${retryAfter} seconds.`,
+      },
+    });
 
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    // If rate limiting fails, log the error but allow the request
-    // This ensures rate limiting failures don't break the API
-    console.error('Rate limiting error:', error);
-    return true;
+    return false;
   }
+
+  return true;
 };
 
 /**
  * Middleware wrapper for rate limiting
- * Use this to wrap handlers that need rate limiting
  */
 export type RateLimitedHandler = (req: VercelRequest, res: VercelResponse) => Promise<void | VercelResponse>;
 
@@ -187,41 +166,16 @@ export const withRateLimit = (
   isExpensiveOperation: boolean = false
 ) => {
   return async (req: VercelRequest, res: VercelResponse) => {
-    // Check if user is attached (from auth middleware)
     const user = (req as any).user as SecureForeman | undefined;
 
     const allowed = await applyRateLimit(req, res, user, isExpensiveOperation);
 
     if (!allowed) {
-      // Response already sent by applyRateLimit
       return;
     }
 
     return handler(req, res);
   };
-};
-
-/**
- * DDoS Protection: Burst detection
- * Detects if a client is making requests at an abnormally high rate
- * Uses a stricter window (10 seconds) to catch burst attacks
- */
-let burstProtectionLimiter: Ratelimit | null = null;
-
-export const getBurstProtectionLimiter = (): Ratelimit => {
-  if (burstProtectionLimiter) {
-    return burstProtectionLimiter;
-  }
-
-  const redis = getRedisInstance();
-  burstProtectionLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(20, '10 s'), // Max 20 requests per 10 seconds
-    analytics: true,
-    prefix: 'ratelimit:burst',
-  });
-
-  return burstProtectionLimiter;
 };
 
 /**
@@ -232,34 +186,27 @@ export const applyBurstProtection = async (
   res: VercelResponse,
   user?: SecureForeman
 ): Promise<boolean> => {
-  // Cron jobs bypass burst protection
   if (isCronRequest(req)) {
     return true;
   }
 
   const identifier = getClientIdentifier(req, user);
-  const limiter = getBurstProtectionLimiter();
+  const key = `burst:${identifier}`;
+  const { success } = checkRateLimit(key, RATE_LIMITS.burst.limit, RATE_LIMITS.burst.windowMs);
 
-  try {
-    const { success } = await limiter.limit(identifier);
+  if (!success) {
+    res.status(429).json({
+      error: 'Too many requests',
+      code: 'BURST_LIMIT_EXCEEDED',
+      details: {
+        message: 'Request rate too high. Please slow down.',
+      },
+    });
 
-    if (!success) {
-      res.status(429).json({
-        error: 'Too many requests',
-        code: 'BURST_LIMIT_EXCEEDED',
-        details: {
-          message: 'Request rate too high. Please slow down.',
-        },
-      });
-
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Burst protection error:', error);
-    return true;
+    return false;
   }
+
+  return true;
 };
 
 /**
@@ -287,3 +234,9 @@ export const withFullRateLimit = (
     return handler(req, res);
   };
 };
+
+// Legacy exports for backwards compatibility (no-op if Redis not configured)
+export const getAnonymousRateLimiter = () => null;
+export const getAuthenticatedRateLimiter = () => null;
+export const getExpensiveOperationRateLimiter = () => null;
+export const getBurstProtectionLimiter = () => null;

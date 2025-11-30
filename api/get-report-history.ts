@@ -1,6 +1,6 @@
 // api/get-report-history.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { QAPacksData } from './_lib/sharepointData.js';
 import { FinalQaPack, Role } from '../src/types';
 import { migrateReport } from './_lib/migration.js';
 import { handleApiError } from './_lib/errors.js';
@@ -18,24 +18,20 @@ async function handler(
   if (!jobNo || typeof jobNo !== 'string') {
     return response.status(400).json({ message: 'Job Number is required.' });
   }
-  
+
   try {
-    const redis = getRedisInstance();
-    const historyKey = `history:${jobNo}`;
-    
-    // LRANGE 0 -1 gets all items in the list
-    const results = await redis.lrange(historyKey, 0, -1);
-    
+    // Get all reports for this job from SharePoint
+    const results = await QAPacksData.getAll(`JobNo eq '${jobNo}'`) as FinalQaPack[];
+
     if (!results || results.length === 0) {
         return response.status(404).json({ message: 'No history found for this job.'});
     }
 
-    const reports: FinalQaPack[] = results.map(res => {
-        const reportData = typeof res === 'string' ? JSON.parse(res) : res;
-        return migrateReport(reportData);
-    });
-    
-    // The list is already ordered from newest to oldest by LPUSH
+    // Migrate each report and sort by version (newest first)
+    const reports: FinalQaPack[] = results
+        .map(report => migrateReport(report))
+        .sort((a, b) => (b.version || 0) - (a.version || 0));
+
     return response.status(200).json(reports);
 
   } catch (error: any) {

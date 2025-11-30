@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StraightEdgeData, StraightEdgeRow } from '../../types';
+import SignaturePad from '../common/SignaturePad';
 
 interface StraightEdgeFormProps {
   initialData: StraightEdgeData;
@@ -16,6 +17,7 @@ const formStyles = {
 
 export const StraightEdgeForm: React.FC<StraightEdgeFormProps> = ({ initialData, onUpdate }) => {
   const [data, setData] = useState(initialData);
+  const supervisorSignaturePadRef = useRef<{ toDataURL: () => string; clear: () => void }>(null);
 
   useEffect(() => {
     onUpdate(data);
@@ -24,6 +26,18 @@ export const StraightEdgeForm: React.FC<StraightEdgeFormProps> = ({ initialData,
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSignatureChange = () => {
+    const signatureData = supervisorSignaturePadRef.current?.toDataURL() || '';
+    setData((prev) => ({ ...prev, supervisorSignature: signatureData }));
+  };
+
+  const handleClearSignature = () => {
+    if (window.confirm('Are you sure you want to clear the supervisor signature?')) {
+      supervisorSignaturePadRef.current?.clear();
+      handleSignatureChange();
+    }
   };
 
   const handleTableRowChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,8 +61,8 @@ export const StraightEdgeForm: React.FC<StraightEdgeFormProps> = ({ initialData,
     <div className="p-6 space-y-6 bg-white border border-gray-200 rounded-lg shadow-md">
       <h3 className="text-xl font-bold text-sga-700">Straight Edge Testing</h3>
 
-      {/* Header Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Header Fields - Per SGA-QA-FRM-005 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div>
           <label htmlFor="se-lotNo" className={formStyles.label}>
             Lot No
@@ -60,6 +74,33 @@ export const StraightEdgeForm: React.FC<StraightEdgeFormProps> = ({ initialData,
             value={data.lotNo}
             onChange={handleChange}
             className={formStyles.input}
+          />
+        </div>
+        <div>
+          <label htmlFor="se-date" className={formStyles.label}>
+            Date
+          </label>
+          <input
+            id="se-date"
+            type="date"
+            name="date"
+            value={data.date}
+            onChange={handleChange}
+            className={formStyles.input}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="se-location" className={formStyles.label}>
+            Location
+          </label>
+          <input
+            id="se-location"
+            type="text"
+            name="location"
+            value={data.location}
+            onChange={handleChange}
+            className={formStyles.input}
+            placeholder="Enter job location"
           />
         </div>
         <div>
@@ -185,19 +226,35 @@ export const StraightEdgeForm: React.FC<StraightEdgeFormProps> = ({ initialData,
         </button>
       </div>
 
-      {/* Supervisor */}
-      <div>
-        <label htmlFor="se-supervisor" className={formStyles.label}>
-          Checked By (Supervisor)
-        </label>
-        <input
-          id="se-supervisor"
-          type="text"
-          name="supervisor"
-          value={data.supervisor}
-          onChange={handleChange}
-          className={formStyles.input}
-        />
+      {/* Supervisor Sign-off - Per SGA-QA-FRM-005 */}
+      <div className="p-4 space-y-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <h4 className="font-semibold text-sga-700">Supervisor Sign-off</h4>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="se-supervisor" className={formStyles.label}>
+              Checked By (Supervisor)
+            </label>
+            <input
+              id="se-supervisor"
+              type="text"
+              name="supervisor"
+              value={data.supervisor}
+              onChange={handleChange}
+              className={formStyles.input}
+            />
+          </div>
+          <div>
+            <label htmlFor="se-supervisor-signature" className={formStyles.label}>
+              Supervisor Signature
+            </label>
+            <div id="se-supervisor-signature" onMouseUp={handleSignatureChange} onTouchEnd={handleSignatureChange}>
+              <SignaturePad ref={supervisorSignaturePadRef} initialSignature={data.supervisorSignature} />
+            </div>
+            <button onClick={handleClearSignature} className="w-full mt-2 px-4 py-1 text-sm text-white bg-gray-600 rounded-md hover:bg-gray-700">
+              Clear Signature
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { DraftsData } from './_lib/sharepointData';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { Role } from '../src/types.js';
@@ -15,22 +15,20 @@ async function handler(
   const { jobId, foremanId } = request.query;
 
   try {
-    const redis = getRedisInstance();
-    
     if (!jobId || !foremanId) {
       return response.status(400).json({ message: 'Job ID and Foreman ID are required.' });
     }
-    
+
     // Security: A foreman can only get drafts for themselves.
     if (request.user.id !== foremanId) {
         return response.status(403).json({ message: 'Forbidden: You can only access your own drafts.' });
     }
 
-    const draftKey = `draft:${jobId}:${foremanId}`;
-    const draftJson = await redis.get<string>(draftKey);
+    // Get all drafts and filter by jobId and foremanId
+    const allDrafts = await DraftsData.getAll(`JobId eq '${jobId}' and ForemanId eq '${foremanId}'`);
 
-    if (draftJson) {
-      return response.status(200).json({ draft: JSON.parse(draftJson) });
+    if (allDrafts.length > 0) {
+      return response.status(200).json({ draft: allDrafts[0].draftData });
     } else {
       return response.status(404).json({ message: 'No draft found.' });
     }

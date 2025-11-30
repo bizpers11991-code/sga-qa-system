@@ -1,10 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { JobsData } from './_lib/sharepointData';
 import { GoogleGenAI } from "@google/genai";
 import { Job, DailyJobSheetData, Role } from '../src/types';
 import { sendErrorNotification } from './_lib/teams.js';
 import { getExpertSystemInstruction } from './_lib/prompts.js';
-import { hydrateObjectFromRedisHash } from './_lib/utils.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
@@ -17,7 +16,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const getMockWeatherForecast = (location: string, date: string): string => {
     const day = new Date(date).getDay();
     const city = location.toLowerCase();
-    
+
     if (city.includes('perth')) {
         return `Forecast for ${date}: 18°C, Partly cloudy with a 20% chance of showers in the afternoon. Winds SW at 15-25 km/h.`;
     }
@@ -38,17 +37,16 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         if (!jobId || typeof jobId !== 'string') {
             return res.status(400).json({ message: 'Job ID is required.' });
         }
-        
-        const redis = getRedisInstance();
-        const jobDataRedis = await redis.hgetall(`job:${jobId}`);
 
-        if (!jobDataRedis) {
+        // Get job data from SharePoint
+        const jobData = await JobsData.getById(jobId);
+
+        if (!jobData) {
             return res.status(404).json({ message: 'Job not found.' });
         }
-        const jobData = hydrateObjectFromRedisHash(jobDataRedis) as Job;
-        
-        const jobSheetDataRedis = await redis.hgetall(`jobsheet:${jobId}`);
-        const jobSheetData = hydrateObjectFromRedisHash(jobSheetDataRedis) as DailyJobSheetData | null;
+
+        // Job sheet data is stored within the job object
+        const jobSheetData = jobData.jobSheetData as DailyJobSheetData | undefined;
         
         const weatherForecast = getMockWeatherForecast(jobData.location, jobData.dueDate);
 

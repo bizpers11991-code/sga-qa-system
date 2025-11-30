@@ -1,33 +1,15 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { Project } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError, NotFoundError, AuthorizationError } from './_lib/errors.js';
-import { validateProject } from './_lib/projectHandler.js';
-
-const prepareObjectForRedis = (obj: Record<string, any>): Record<string, string> => {
-  const prepared: Record<string, string> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null) {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        prepared[key] = JSON.stringify(value);
-      } else {
-        prepared[key] = String(value);
-      }
-    }
-  }
-  return prepared;
-};
+import { ProjectsData } from './_lib/sharepointData';
+import { Project } from '../src/types';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError, NotFoundError, AuthorizationError } from './_lib/errors';
+import { validateProject } from './_lib/projectHandler';
 
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
 ) {
   try {
-    const redis = getRedisInstance();
-
-    // Get project ID from query parameter
     const { id } = request.query;
     const updates: Partial<Project> = request.body;
 
@@ -35,25 +17,14 @@ async function handler(
       throw new NotFoundError('Project', { providedId: id });
     }
 
-    // Fetch existing project
-    const projectKey = `project:${id}`;
-    const projectHash = await redis.hgetall(projectKey);
+    // Fetch existing project from SharePoint
+    const existingProject = await ProjectsData.getById(id);
 
-    if (!projectHash || Object.keys(projectHash).length === 0) {
+    if (!existingProject) {
       throw new NotFoundError('Project', { projectId: id });
     }
 
-    // Reconstruct existing project
-    const existingProject: Partial<Project> = {};
-    for (const [key, value] of Object.entries(projectHash)) {
-      try {
-        existingProject[key as keyof Project] = JSON.parse(value as string);
-      } catch {
-        (existingProject as any)[key] = value;
-      }
-    }
-
-    // Authorization check: Only project owner, scheduler_admin, or management_admin can update
+    // Authorization check
     const isAuthorized =
       request.user.role === 'scheduler_admin' ||
       request.user.role === 'management_admin' ||
@@ -72,23 +43,21 @@ async function handler(
     delete updates.projectNumber;
     delete updates.handoverId;
 
-    // Merge updates with existing project
+    // Merge and validate
     const updatedProject: Project = {
       ...existingProject,
       ...updates,
     } as Project;
 
-    // Validate the updated project
     validateProject(updatedProject);
 
-    // Store updated project
-    const preparedProject = prepareObjectForRedis(updatedProject);
-    await redis.hset(projectKey, preparedProject);
+    // Update in SharePoint
+    const result = await ProjectsData.update(id, updates);
 
     return response.status(200).json({
       success: true,
-      message: `Project ${updatedProject.projectNumber} updated successfully`,
-      project: updatedProject,
+      message: `Project ${existingProject.projectNumber} updated successfully`,
+      project: result,
     });
 
   } catch (error: any) {
@@ -104,7 +73,6 @@ async function handler(
   }
 }
 
-// Auth check is done within the handler for conditional authorization
 export default withAuth(handler, [
   'scheduler_admin',
   'management_admin',

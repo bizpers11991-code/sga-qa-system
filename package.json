@@ -9,13 +9,18 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "test:sharepoint": "vitest tests/sharepoint",
+    "test:api": "vitest tests/api",
+    "sharepoint:test-connection": "tsx scripts/test-sharepoint-connection.ts",
+    "sharepoint:validate-migration": "tsx scripts/validate-migration.ts"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.2.4",
     "@aws-sdk/client-s3": "^3.583.0",
     "@aws-sdk/s3-request-presigner": "^3.583.0",
     "@azure/msal-browser": "^4.26.1",
+    "@azure/msal-node": "^3.8.3",
     "@azure/msal-react": "^3.0.21",
     "@google/genai": "^1.23.0",
     "@google/generative-ai": "^0.24.1",

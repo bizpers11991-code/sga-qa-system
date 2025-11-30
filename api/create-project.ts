@@ -1,28 +1,13 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { Project, TenderHandover } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError } from './_lib/errors.js';
+import { ProjectsData, TendersData } from './_lib/sharepointData';
+import { Project, TenderHandover } from '../src/types';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError } from './_lib/errors';
 import {
   generateProjectNumber,
   validateProject,
   initializeDivisions,
-} from './_lib/projectHandler.js';
-
-const prepareObjectForRedis = (obj: Record<string, any>): Record<string, string> => {
-  const prepared: Record<string, string> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null) {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        prepared[key] = JSON.stringify(value);
-      } else {
-        prepared[key] = String(value);
-      }
-    }
-  }
-  return prepared;
-};
+} from './_lib/projectHandler';
 
 async function handler(
   request: AuthenticatedRequest,
@@ -34,52 +19,18 @@ async function handler(
   } = request.body;
 
   try {
-    const redis = getRedisInstance();
-
     // If handoverId is provided, fetch handover data
     let handover: TenderHandover | null = null;
     if (projectData.handoverId) {
-      const handoverKey = `handover:${projectData.handoverId}`;
-      const handoverHash = await redis.hgetall(handoverKey);
-
-      if (handoverHash && Object.keys(handoverHash).length > 0) {
-        const handoverObj: Partial<TenderHandover> = {};
-        for (const [key, value] of Object.entries(handoverHash)) {
-          try {
-            handoverObj[key as keyof TenderHandover] = JSON.parse(value as string);
-          } catch {
-            (handoverObj as any)[key] = value;
-          }
-        }
-        handover = handoverObj as TenderHandover;
-      }
+      handover = await TendersData.getById(projectData.handoverId);
     }
 
     // Get all existing projects to generate next number
-    const projectKeys = await redis.smembers('projects:index');
-    const existingProjects: Project[] = [];
-
-    for (const projectId of projectKeys) {
-      const projectKey = `project:${projectId}`;
-      const projectHash = await redis.hgetall(projectKey);
-
-      if (projectHash && Object.keys(projectHash).length > 0) {
-        const proj: Partial<Project> = {};
-        for (const [key, value] of Object.entries(projectHash)) {
-          try {
-            proj[key as keyof Project] = JSON.parse(value as string);
-          } catch {
-            (proj as any)[key] = value;
-          }
-        }
-        existingProjects.push(proj as Project);
-      }
-    }
+    const existingProjects = await ProjectsData.getAll();
 
     // Determine project owner division
     let projectOwnerDivision: 'Asphalt' | 'Profiling' | 'Spray' = 'Asphalt';
     if (handover) {
-      // Determine based on divisions required (default to Asphalt if multiple)
       if (handover.divisionsRequired.asphalt) {
         projectOwnerDivision = 'Asphalt';
       } else if (handover.divisionsRequired.profiling) {
@@ -99,12 +50,10 @@ async function handler(
     };
     const divisions = initializeDivisions(divisionsRequired);
 
-    // Generate project number and create full project object
+    // Generate project number
     const projectNumber = generateProjectNumber(existingProjects);
-    const projectId = `project-${Date.now()}`;
 
-    const completeProject: Project = {
-      id: projectId,
+    const completeProject: Omit<Project, 'id'> = {
       projectNumber,
       handoverId: projectData.handoverId || handover?.id || '',
       projectName: projectData.projectName || handover?.projectName || '',
@@ -123,28 +72,20 @@ async function handler(
     };
 
     // Validate project
-    validateProject(completeProject);
+    validateProject(completeProject as Project);
 
-    // Store project in Redis
-    const projectKey = `project:${projectId}`;
-    const preparedProject = prepareObjectForRedis(completeProject);
-
-    const pipeline = redis.pipeline();
-    pipeline.hset(projectKey, preparedProject);
-    pipeline.sadd('projects:index', projectId);
-
-    await pipeline.exec();
+    // Create project in SharePoint
+    const createdProject = await ProjectsData.create(completeProject);
 
     // If created from handover, update handover status
     if (handover) {
-      const handoverKey = `handover:${handover.id}`;
-      await redis.hset(handoverKey, 'status', 'Active');
+      await TendersData.update(handover.id, { status: 'Active' });
     }
 
     return response.status(201).json({
       success: true,
       message: `Project ${projectNumber} created successfully`,
-      project: completeProject,
+      project: createdProject,
     });
 
   } catch (error: any) {

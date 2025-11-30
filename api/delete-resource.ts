@@ -1,6 +1,6 @@
 // api/delete-resource.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ResourcesData } from './_lib/sharepointData';
 import { ResourceType } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -13,12 +13,18 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'Type and ID are required.' });
         }
 
-        const redis = getRedisInstance();
-        const key = type === 'Crew' ? 'resources:crew' : 'resources:equipment';
+        // Find the resource by custom id and type
+        const allResources = await ResourcesData.getAll();
+        const resource = allResources.find((r: any) => r.id === id && r.resourceType === type);
 
-        const result = await redis.hdel(key, id);
+        if (!resource) {
+            return res.status(404).json({ message: 'Resource not found.' });
+        }
 
-        if (result > 0) {
+        // Delete using SharePoint's internal Id
+        const result = await ResourcesData.delete(resource.id);
+
+        if (result) {
             res.status(200).json({ message: `${type} resource deleted successfully.` });
         } else {
             res.status(404).json({ message: 'Resource not found.' });

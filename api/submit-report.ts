@@ -7,7 +7,7 @@
  * 4.  The application data is rendered into an HTML view and then converted into a PDF using a headless browser (Puppeteer).
  * 5.  The generated PDF is named according to the format: SGA-[JobNo]-[ProjectName]-QAPack.pdf.
  * 6.  The PDF is uploaded to cloud storage.
- * 7.  The final report metadata (with URLs to assets, minus large base64 data) is saved to the database (Redis), versioning it if a previous submission exists.
+ * 7.  The final report metadata (with URLs to assets, minus large base64 data) is saved to SharePoint, versioning it if a previous submission exists.
  * 8.  An immediate success response is sent to the user.
  * 9.  In the background, the system sends notifications to relevant MS Teams channels and triggers an AI summary generation.
  */
@@ -15,8 +15,8 @@ import { Buffer } from 'buffer';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Config } from './_lib/r2.js';
-import { getRedisInstance } from './_lib/redis.js';
-import { generateReportSummary } from './_lib/gemini.js';
+import { QAPacksData } from './_lib/sharepointData.js';
+import { generateReportSummary } from './_lib/copilot.js';
 import { sendSummaryNotification, sendQAPackNotification, sendBiosecurityNotification } from './_lib/teams.js';
 import { FinalQaPack, SitePhoto, DamagePhoto, JobSheetImage, Role, SecureForeman, isAdminRole } from '../src/types.js';
 import chromium from '@sparticuz/chromium';
@@ -59,8 +59,6 @@ const uploadAsset = async (
 
 // Asynchronous background task for automated analysis
 const processAutomatedAnalysis = async (report: FinalQaPack) => {
-    const redis = getRedisInstance();
-    const historyKey = `history:${report.job.jobNo}`;
     let updatedReport = { ...report };
 
     try {
@@ -68,9 +66,14 @@ const processAutomatedAnalysis = async (report: FinalQaPack) => {
         updatedReport.expertSummary = summary;
         updatedReport.expertSummaryStatus = 'completed';
 
-        // Update the latest report in Redis with the summary
-        await redis.lset(historyKey, 0, JSON.stringify(updatedReport));
-        
+        // Update the report in SharePoint with the summary
+        if (report.id) {
+            await QAPacksData.update(report.id, {
+                expertSummary: summary,
+                expertSummaryStatus: 'completed'
+            } as any);
+        }
+
         // Send summary notification now that it's complete
         await sendSummaryNotification(updatedReport, summary);
 
@@ -78,7 +81,14 @@ const processAutomatedAnalysis = async (report: FinalQaPack) => {
         console.error('Automated analysis failed:', aiError);
         updatedReport.expertSummaryStatus = 'failed';
         updatedReport.expertSummary = 'Automated summary generation failed. Please try again later.';
-        await redis.lset(historyKey, 0, JSON.stringify(updatedReport));
+
+        if (report.id) {
+            await QAPacksData.update(report.id, {
+                expertSummary: updatedReport.expertSummary,
+                expertSummaryStatus: 'failed'
+            } as any);
+        }
+
         // Use the centralized error handler to report this background failure
         await handleApiError({
             error: aiError,
@@ -103,7 +113,6 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         }
 
         const r2 = getR2Config();
-        const redis = getRedisInstance();
         const timestamp = new Date().toISOString();
         const datePath = timestamp.split('T')[0]; // YYYY-MM-DD
 
@@ -199,14 +208,18 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             if (browser) await browser.close();
         }
         
-        // --- 3. Save CRITICAL DATA to Redis (Versioning) ---
-        const historyKey = `history:${jobNo}`;
-        const currentLength = await redis.llen(historyKey);
-        report.version = currentLength + 1;
+        // --- 3. Save CRITICAL DATA to SharePoint (Versioning) ---
+        // Get existing reports for this job to determine version number
+        const existingReports = await QAPacksData.getAll(`JobNo eq '${jobNo}'`) as FinalQaPack[];
+        const maxVersion = existingReports.length > 0
+            ? Math.max(...existingReports.map(r => r.version || 0))
+            : 0;
+
+        report.version = maxVersion + 1;
         report.timestamp = timestamp;
         report.expertSummaryStatus = 'pending'; // Set initial status
         report.schemaVersion = LATEST_SCHEMA_VERSION; // Stamp with the latest version
-        
+
         // Clean up large base64 data before saving to DB
         delete report.foremanPhoto;
         if(report.sitePhotos) report.sitePhotos = [];
@@ -214,10 +227,11 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         if(report.jobSheet.jobSheetImages) report.jobSheet.jobSheetImages = [];
         delete report.pdfData;
         delete report.expertSummary; // Summary will be added later
-        
-        await redis.lpush(historyKey, JSON.stringify(report));
-        await redis.sadd('reports:index', jobNo);
-        
+
+        // Create the report in SharePoint
+        const savedReport = await QAPacksData.create(report as any);
+        report.id = savedReport.id;
+
         // --- 4. RESPOND TO USER IMMEDIATELY ---
         // The foreman's report is now safely stored.
         res.status(200).json({ message: 'Report submitted successfully!', report });

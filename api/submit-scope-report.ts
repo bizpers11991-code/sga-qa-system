@@ -1,30 +1,15 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { ScopeReport, Project } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError, NotFoundError } from './_lib/errors.js';
+import { ScopeReportsData, ProjectsData } from './_lib/sharepointData';
+import { ScopeReport, Project } from '../src/types';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError, NotFoundError } from './_lib/errors';
 import {
   generateScopeReportNumber,
   validateScopeReport,
   updateProjectAfterScopeReport,
   sendScopeReportNotification,
   postScopeReportToTeams,
-} from './_lib/scopeReportHandler.js';
-
-const prepareObjectForRedis = (obj: Record<string, any>): Record<string, string> => {
-  const prepared: Record<string, string> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null) {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        prepared[key] = JSON.stringify(value);
-      } else {
-        prepared[key] = String(value);
-      }
-    }
-  }
-  return prepared;
-};
+} from './_lib/scopeReportHandler';
 
 async function handler(
   request: AuthenticatedRequest,
@@ -33,39 +18,24 @@ async function handler(
   const reportData: Partial<ScopeReport> = request.body;
 
   try {
-    const redis = getRedisInstance();
-
     // Validate scope report data
     validateScopeReport(reportData);
 
     // Fetch project to get project number
-    const projectKey = `project:${reportData.projectId}`;
-    const projectHash = await redis.hgetall(projectKey);
+    const project = await ProjectsData.getById(reportData.projectId!);
 
-    if (!projectHash || Object.keys(projectHash).length === 0) {
+    if (!project) {
       throw new NotFoundError('Project', { projectId: reportData.projectId });
-    }
-
-    // Reconstruct project
-    const project: Partial<Project> = {};
-    for (const [key, value] of Object.entries(projectHash)) {
-      try {
-        project[key as keyof Project] = JSON.parse(value as string);
-      } catch {
-        (project as any)[key] = value;
-      }
     }
 
     // Generate report number
     const reportNumber = generateScopeReportNumber(
-      (project as Project).projectNumber,
+      project.projectNumber,
       reportData.visitNumber!
     );
-    const reportId = `scopereport-${Date.now()}`;
 
     // Create complete scope report
-    const completeReport: ScopeReport = {
-      id: reportId,
+    const completeReportData: Omit<ScopeReport, 'id'> = {
       reportNumber,
       projectId: reportData.projectId!,
       visitNumber: reportData.visitNumber!,
@@ -88,15 +58,8 @@ async function handler(
       status: 'Submitted',
     };
 
-    // Store scope report in Redis
-    const reportKey = `scopereport:${reportId}`;
-    const preparedReport = prepareObjectForRedis(completeReport);
-
-    const pipeline = redis.pipeline();
-    pipeline.hset(reportKey, preparedReport);
-    pipeline.sadd('scopereports:index', reportId);
-
-    await pipeline.exec();
+    // Store scope report in SharePoint
+    const completeReport = await ScopeReportsData.create(completeReportData);
 
     // Respond to user immediately
     response.status(201).json({
@@ -108,17 +71,17 @@ async function handler(
     // --- Asynchronous Post-Submission Tasks ---
 
     // 1. Update project with report
-    updateProjectAfterScopeReport(reportData.projectId!, reportId).catch(err => {
+    updateProjectAfterScopeReport(reportData.projectId!, completeReport.id).catch(err => {
       console.error(`[Non-blocking] Failed to update project after scope report:`, err);
     });
 
     // 2. Send notification to project owner
-    sendScopeReportNotification(completeReport, project as Project).catch(err => {
+    sendScopeReportNotification(completeReport, project).catch(err => {
       console.error(`[Non-blocking] Failed to send scope report notification:`, err);
     });
 
     // 3. Post summary to Teams
-    postScopeReportToTeams(completeReport, project as Project).catch(err => {
+    postScopeReportToTeams(completeReport, project).catch(err => {
       console.error(`[Non-blocking] Failed to post scope report to Teams:`, err);
     });
 

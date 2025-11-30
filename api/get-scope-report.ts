@@ -1,16 +1,13 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { ScopeReport } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError, NotFoundError } from './_lib/errors.js';
+import { ScopeReportsData } from './_lib/sharepointData';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError, NotFoundError } from './_lib/errors';
 
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
 ) {
   try {
-    const redis = getRedisInstance();
-
     // Get scope report ID from query parameter
     const { id } = request.query;
 
@@ -18,25 +15,14 @@ async function handler(
       throw new NotFoundError('Scope Report', { providedId: id });
     }
 
-    // Fetch scope report from Redis
-    const reportKey = `scopereport:${id}`;
-    const reportHash = await redis.hgetall(reportKey);
+    // Fetch scope report from SharePoint
+    const report = await ScopeReportsData.getById(id);
 
-    if (!reportHash || Object.keys(reportHash).length === 0) {
+    if (!report) {
       throw new NotFoundError('Scope Report', { reportId: id });
     }
 
-    // Reconstruct scope report object
-    const report: Partial<ScopeReport> = {};
-    for (const [key, value] of Object.entries(reportHash)) {
-      try {
-        report[key as keyof ScopeReport] = JSON.parse(value as string);
-      } catch {
-        (report as any)[key] = value;
-      }
-    }
-
-    return response.status(200).json(report as ScopeReport);
+    return response.status(200).json(report);
 
   } catch (error: any) {
     await handleApiError({

@@ -1,10 +1,9 @@
 // api/cron/send-summaries.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from '../_lib/redis.js';
+import { QAPacksData } from '../_lib/sharepointData.js';
 import { GoogleGenAI } from "@google/genai";
 import { FinalQaPack } from '../../types.js';
 import { sendDailySummaryNotification } from '../_lib/teams.js';
-import { migrateReport } from '../_lib/migration.js';
 import { getExpertSystemInstruction } from '../_lib/prompts.js';
 import { handleApiError } from '../_lib/errors.js';
 
@@ -27,25 +26,23 @@ export default async function handler(
     }
 
     try {
-        const redis = getRedisInstance();
         console.log("Running End of Day (4pm) summary cron job...");
 
         const targetDate = getTodayPerth();
-        const jobNumbers = await redis.smembers('reports:index');
 
-        if (jobNumbers.length === 0) {
+        // Get all QA packs from SharePoint
+        const allReports = await QAPacksData.getAll() as FinalQaPack[];
+
+        if (allReports.length === 0) {
             console.log("No reports found. Exiting cron job.");
             return response.status(200).json({ message: "No reports to summarize." });
         }
 
-        const pipeline = redis.pipeline();
-        jobNumbers.forEach(jobNo => pipeline.lrange(`history:${jobNo}`, 0, -1));
-        const historyResults = await pipeline.exec<string[][]>();
-        
-        const reportsFromToday = historyResults
-            .flat()
-            .map(r => migrateReport(JSON.parse(r)))
-            .filter(report => new Date(report.timestamp).toLocaleDateString('en-CA', { timeZone: 'Australia/Perth' }) === targetDate);
+        // Filter reports submitted today
+        const reportsFromToday = allReports.filter(report =>
+            report.timestamp &&
+            new Date(report.timestamp).toLocaleDateString('en-CA', { timeZone: 'Australia/Perth' }) === targetDate
+        );
 
         if (reportsFromToday.length === 0) {
             console.log(`No reports submitted on ${targetDate}. Exiting cron job.`);

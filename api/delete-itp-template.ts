@@ -1,20 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ITPTemplatesData } from './_lib/sharepointData';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     try {
-        const redis = getRedisInstance();
         const { id } = req.body;
 
         if (!id) {
             return res.status(400).json({ message: 'Template ID is required.' });
         }
 
-        const result = await redis.hdel('itp_templates', id);
+        // Check if template exists
+        const template = await ITPTemplatesData.getById(id);
 
-        if (result > 0) {
+        if (!template) {
+            return res.status(404).json({ message: 'Template not found.' });
+        }
+
+        // Delete the template
+        const result = await ITPTemplatesData.delete(id);
+
+        if (result) {
             res.status(200).json({ message: 'Template deleted successfully.' });
         } else {
             res.status(404).json({ message: 'Template not found.' });

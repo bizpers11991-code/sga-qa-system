@@ -3,6 +3,7 @@ import { SgaDailyReportData, Job, CrewResource, EquipmentResource } from '../../
 import SignaturePad from '../common/SignaturePad';
 import SgaLogo from '../common/SgaLogo';
 import VoiceInput from '../common/VoiceInput';
+import { useWeatherForForm } from '@/context/WeatherContext';
 
 interface DailyReportFormProps {
   initialData: SgaDailyReportData;
@@ -68,8 +69,42 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
   equipmentResources,
 }) => {
   const [data, setData] = useState(initialData);
+  const sgaSignaturePadRef = useRef<{ toDataURL: () => string; clear: () => void }>(null);
   const clientSignaturePadRef = useRef<{ toDataURL: () => string; clear: () => void }>(null);
   const isProfiling = job.division === 'Profiling';
+
+  // Weather automation from BOM API
+  const {
+    weatherConditions,
+    loading: weatherLoading,
+    isWorkSuitable,
+    warnings: weatherWarnings,
+    recommendations: weatherRecommendations,
+    refresh: refreshWeather,
+  } = useWeatherForForm();
+
+  // Auto-populate weather from BOM API
+  const autoPopulateWeather = () => {
+    if (!weatherConditions) {
+      alert('Weather data not available. Please check your internet connection.');
+      return;
+    }
+
+    const currentTime = new Date().toTimeString().slice(0, 5);
+    const newWeatherRow = {
+      time: currentTime,
+      airTemp: weatherConditions.temperature.toString(),
+      roadTemp: '', // Road temp must be measured on-site
+      windSpeed: `${weatherConditions.windSpeed} km/h ${weatherConditions.windDirection}`,
+      chillFactor: weatherConditions.conditions,
+      dayNight: new Date().getHours() >= 6 && new Date().getHours() < 18 ? 'Day' as const : 'Night' as const,
+    };
+
+    setData((prev) => ({
+      ...prev,
+      weatherConditions: [...(prev.weatherConditions || []), newWeatherRow],
+    }));
+  };
 
   // Filter resources based on the job's division
   const crewList = crewResources.filter((c) => c.division === job.division || c.division === 'Common');
@@ -150,15 +185,27 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
     setData((prev) => ({ ...prev, [section]: list }));
   };
 
-  const handleSignatureChange = () => {
+  const handleSgaSignatureChange = () => {
+    const signatureData = sgaSignaturePadRef.current?.toDataURL() || '';
+    setData((prev) => ({ ...prev, sgaSignature: signatureData }));
+  };
+
+  const handleClearSgaSignature = () => {
+    if (window.confirm("Are you sure you want to clear the SGA representative's signature?")) {
+      sgaSignaturePadRef.current?.clear();
+      handleSgaSignatureChange();
+    }
+  };
+
+  const handleClientSignatureChange = () => {
     const signatureData = clientSignaturePadRef.current?.toDataURL() || '';
     setData((prev) => ({ ...prev, clientSignature: signatureData }));
   };
 
-  const handleClearSignature = () => {
+  const handleClearClientSignature = () => {
     if (window.confirm("Are you sure you want to clear the client's signature?")) {
       clientSignaturePadRef.current?.clear();
-      handleSignatureChange();
+      handleClientSignatureChange();
     }
   };
 
@@ -282,9 +329,70 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
         </div>
       </div>
 
-      {/* Weather Conditions */}
+      {/* Weather Conditions - Auto-populated from BOM API */}
       <div className="space-y-2">
-        <h4 className="font-semibold">Weather Conditions</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold">Weather Conditions</h4>
+          <div className="flex items-center gap-2">
+            {weatherLoading && (
+              <span className="text-sm text-gray-500">Loading BOM data...</span>
+            )}
+            <button
+              type="button"
+              onClick={autoPopulateWeather}
+              disabled={weatherLoading || !weatherConditions}
+              className="px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Auto-Fill from BOM
+            </button>
+            <button
+              type="button"
+              onClick={refreshWeather}
+              disabled={weatherLoading}
+              className="px-2 py-1 text-xs text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Weather Warnings Banner */}
+        {!isWorkSuitable && weatherWarnings.length > 0 && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-600 text-lg">⚠️</span>
+              <div>
+                <p className="font-semibold text-amber-800">Weather Alert - Review Before Proceeding</p>
+                <ul className="mt-1 text-sm text-amber-700 list-disc list-inside">
+                  {weatherWarnings.map((warning, i) => (
+                    <li key={i}>{warning}</li>
+                  ))}
+                </ul>
+                {weatherRecommendations.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-amber-200">
+                    <p className="text-xs font-medium text-amber-800">Recommendations:</p>
+                    <ul className="text-xs text-amber-600 list-disc list-inside">
+                      {weatherRecommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Current BOM Weather Display */}
+        {weatherConditions && (
+          <div className="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+            <span className="font-medium text-blue-800">Live BOM Data:</span>
+            <span className="ml-2 text-blue-700">
+              {weatherConditions.temperature}°C | {weatherConditions.conditions} | Wind: {weatherConditions.windSpeed} km/h {weatherConditions.windDirection} | Humidity: {weatherConditions.humidity}%
+            </span>
+          </div>
+        )}
+
         {(data.weatherConditions || []).map((row, index) => (
           <div
             key={index}
@@ -688,36 +796,72 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
         </VoiceInput>
       </div>
 
-      {/* Client Approval */}
-      <div className="p-4 space-y-3 bg-gray-50 border border-gray-200 rounded-lg">
-        <h4 className="font-semibold text-sga-700">Client Approval</h4>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label htmlFor="client-sign-name" className={formStyles.label}>
-              Client Name
-            </label>
-            <input
-              id="client-sign-name"
-              type="text"
-              name="clientSignName"
-              value={data.clientSignName}
-              onChange={handleChange}
-              className={formStyles.input}
-            />
-          </div>
-          <div>
-            <label htmlFor="client-signature" className={formStyles.label}>
-              Client Signature
-              {data.correctorUsed === 'Yes' && (
-                <span className="ml-2 text-xs font-bold text-red-500">(Mandatory for Corrector Use)</span>
-              )}
-            </label>
-            <div id="client-signature" onMouseUp={handleSignatureChange} onTouchEnd={handleSignatureChange}>
-              <SignaturePad ref={clientSignaturePadRef} initialSignature={data.clientSignature} />
+      {/* Sign-off Section - Per SGA-QA-FRM-007 (Dual Signature Required) */}
+      <div className="p-4 space-y-6 bg-gray-50 border border-gray-200 rounded-lg">
+        <h4 className="text-lg font-semibold text-sga-700">Sign-off</h4>
+
+        {/* SGA Representative Approval */}
+        <div className="p-4 bg-white border border-gray-200 rounded-lg">
+          <h5 className="font-semibold text-gray-700 mb-3">SGA Representative</h5>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="sga-sign-name" className={formStyles.label}>
+                Name
+              </label>
+              <input
+                id="sga-sign-name"
+                type="text"
+                name="sgaSignName"
+                value={data.sgaSignName}
+                onChange={handleChange}
+                className={formStyles.input}
+              />
             </div>
-            <button onClick={handleClearSignature} className="w-full mt-2 px-4 py-1 text-sm text-white bg-gray-600 rounded-md hover:bg-gray-700">
-              Clear
-            </button>
+            <div>
+              <label htmlFor="sga-signature" className={formStyles.label}>
+                Signature
+              </label>
+              <div id="sga-signature" onMouseUp={handleSgaSignatureChange} onTouchEnd={handleSgaSignatureChange}>
+                <SignaturePad ref={sgaSignaturePadRef} initialSignature={data.sgaSignature} />
+              </div>
+              <button onClick={handleClearSgaSignature} className="w-full mt-2 px-4 py-1 text-sm text-white bg-gray-600 rounded-md hover:bg-gray-700">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Client Approval */}
+        <div className="p-4 bg-white border border-gray-200 rounded-lg">
+          <h5 className="font-semibold text-gray-700 mb-3">Client Representative</h5>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label htmlFor="client-sign-name" className={formStyles.label}>
+                Name
+              </label>
+              <input
+                id="client-sign-name"
+                type="text"
+                name="clientSignName"
+                value={data.clientSignName}
+                onChange={handleChange}
+                className={formStyles.input}
+              />
+            </div>
+            <div>
+              <label htmlFor="client-signature" className={formStyles.label}>
+                Signature
+                {data.correctorUsed === 'Yes' && (
+                  <span className="ml-2 text-xs font-bold text-red-500">(Mandatory for Corrector Use)</span>
+                )}
+              </label>
+              <div id="client-signature" onMouseUp={handleClientSignatureChange} onTouchEnd={handleClientSignatureChange}>
+                <SignaturePad ref={clientSignaturePadRef} initialSignature={data.clientSignature} />
+              </div>
+              <button onClick={handleClearClientSignature} className="w-full mt-2 px-4 py-1 text-sm text-white bg-gray-600 rounded-md hover:bg-gray-700">
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       </div>

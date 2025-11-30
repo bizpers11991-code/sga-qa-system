@@ -1,26 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { DocumentsData } from './_lib/sharepointData';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { SpecificationDocument } from '../src/types';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     try {
-        const redis = getRedisInstance();
-        const docIds = await redis.smembers('documents:index');
+        // Get all documents from SharePoint
+        const documents = await DocumentsData.getAll();
 
-        if (docIds.length === 0) {
-            return res.status(200).json([]);
-        }
+        // Sort by uploadedAt descending (most recent first)
+        const sortedDocuments = documents.sort((a, b) =>
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        );
 
-        const docsJson = await redis.mget(...docIds.map(id => `document:${id}`));
-
-        const documents = docsJson
-            .filter((d): d is string => d !== null)
-            .map(d => JSON.parse(d) as SpecificationDocument)
-            .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-        
-        res.status(200).json(documents);
+        res.status(200).json(sortedDocuments);
 
     } catch (error: any) {
         await handleApiError({

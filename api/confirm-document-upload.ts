@@ -1,4 +1,4 @@
-import { getRedisInstance } from './_lib/redis.js';
+import { DocumentsData } from './_lib/sharepointData';
 import { getR2Config } from './_lib/r2.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { SpecificationDocument } from '../src/types';
@@ -16,11 +16,9 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'Missing required document metadata.' });
         }
 
-        const redis = getRedisInstance();
         const r2 = getR2Config();
 
-        const newDocument: SpecificationDocument = {
-            id: `doc-${Date.now()}`,
+        const newDocument = {
             title,
             category,
             fileKey,
@@ -30,12 +28,10 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             uploadedAt: new Date().toISOString(),
         };
 
-        const pipeline = redis.pipeline();
-        pipeline.set(`document:${newDocument.id}`, JSON.stringify(newDocument));
-        pipeline.sadd('documents:index', newDocument.id);
-        await pipeline.exec();
+        // Save document to SharePoint
+        const savedDocument = await DocumentsData.create(newDocument);
 
-        res.status(200).json({ message: 'Document confirmed and saved.', document: newDocument });
+        res.status(200).json({ message: 'Document confirmed and saved.', document: savedDocument });
 
     } catch (error: any) {
         await handleApiError({

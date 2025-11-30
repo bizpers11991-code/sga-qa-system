@@ -1,22 +1,19 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { DivisionRequest, Project } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError, NotFoundError, AuthorizationError, ValidationError } from './_lib/errors.js';
+import { DivisionRequestsData, ProjectsData } from './_lib/sharepointData';
+import { DivisionRequest } from '../src/types';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError, NotFoundError, AuthorizationError, ValidationError } from './_lib/errors';
 import {
   notifyProjectOwner,
   createDivisionCalendarEvents,
   createJobsForRequest,
-} from './_lib/divisionRequestHandler.js';
+} from './_lib/divisionRequestHandler';
 
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
 ) {
   try {
-    const redis = getRedisInstance();
-
-    // Get division request ID from query parameter
     const { id } = request.query;
     const {
       response: requestResponse,
@@ -42,25 +39,14 @@ async function handler(
       });
     }
 
-    // Fetch existing division request
-    const requestKey = `divisionrequest:${id}`;
-    const requestHash = await redis.hgetall(requestKey);
+    // Fetch existing division request from SharePoint
+    const existingRequest = await DivisionRequestsData.getById(id);
 
-    if (!requestHash || Object.keys(requestHash).length === 0) {
+    if (!existingRequest) {
       throw new NotFoundError('Division Request', { requestId: id });
     }
 
-    // Reconstruct division request
-    const existingRequest: Partial<DivisionRequest> = {};
-    for (const [key, value] of Object.entries(requestHash)) {
-      try {
-        existingRequest[key as keyof DivisionRequest] = JSON.parse(value as string);
-      } catch {
-        (existingRequest as any)[key] = value;
-      }
-    }
-
-    // Authorization check: Only the requested division engineer can respond
+    // Authorization check
     if (request.user.id !== existingRequest.requestedTo) {
       throw new AuthorizationError('You are not authorized to respond to this request', {
         userId: request.user.id,
@@ -73,17 +59,13 @@ async function handler(
       if (!assignedCrewId || !assignedForemanId || !confirmedDates || confirmedDates.length === 0) {
         throw new ValidationError(
           'Accepting a request requires assignedCrewId, assignedForemanId, and confirmedDates',
-          {
-            assignedCrewId,
-            assignedForemanId,
-            confirmedDates,
-          }
+          { assignedCrewId, assignedForemanId, confirmedDates }
         );
       }
     }
 
-    // Update request with response
-    const updates: Record<string, any> = {
+    // Prepare updates
+    const updates: Partial<DivisionRequest> = {
       status: requestResponse === 'accept' ? 'Accepted' : 'Rejected',
       responseNotes: responseNotes || '',
     };
@@ -91,75 +73,37 @@ async function handler(
     if (requestResponse === 'accept') {
       updates.assignedCrewId = assignedCrewId;
       updates.assignedForemanId = assignedForemanId;
-      updates.confirmedDates = JSON.stringify(confirmedDates);
+      updates.confirmedDates = confirmedDates;
     }
 
-    const pipeline = redis.pipeline();
-    for (const [key, value] of Object.entries(updates)) {
-      if (typeof value === 'object') {
-        pipeline.hset(requestKey, key, JSON.stringify(value));
-      } else {
-        pipeline.hset(requestKey, key, String(value));
-      }
-    }
-    await pipeline.exec();
-
-    // Fetch updated request
-    const updatedRequestHash = await redis.hgetall(requestKey);
-    const updatedRequest: Partial<DivisionRequest> = {};
-    for (const [key, value] of Object.entries(updatedRequestHash)) {
-      try {
-        updatedRequest[key as keyof DivisionRequest] = JSON.parse(value as string);
-      } catch {
-        (updatedRequest as any)[key] = value;
-      }
-    }
+    // Update in SharePoint
+    const updatedRequest = await DivisionRequestsData.update(id, updates);
 
     // Fetch project
-    const projectKey = `project:${existingRequest.projectId}`;
-    const projectHash = await redis.hgetall(projectKey);
-    const project: Partial<Project> = {};
-    for (const [key, value] of Object.entries(projectHash)) {
-      try {
-        project[key as keyof Project] = JSON.parse(value as string);
-      } catch {
-        (project as any)[key] = value;
-      }
-    }
+    const project = await ProjectsData.getById(existingRequest.projectId);
 
-    // Respond to user immediately
+    // Respond immediately
     response.status(200).json({
       success: true,
-      message: `Division request ${(existingRequest as DivisionRequest).requestNumber} ${requestResponse}ed successfully`,
-      request: updatedRequest as DivisionRequest,
+      message: `Division request ${existingRequest.requestNumber} ${requestResponse}ed successfully`,
+      request: updatedRequest,
     });
 
-    // --- Asynchronous Post-Response Tasks ---
-
-    // 1. Notify project owner
-    notifyProjectOwner(
-      updatedRequest as DivisionRequest,
-      project as Project,
-      requestResponse
-    ).catch(err => {
-      console.error(`[Non-blocking] Failed to notify project owner:`, err);
-    });
-
-    // 2. If accepted, create calendar events and jobs
-    if (requestResponse === 'accept') {
-      createDivisionCalendarEvents(
-        updatedRequest as DivisionRequest,
-        project as Project
-      ).catch(err => {
-        console.error(`[Non-blocking] Failed to create calendar events:`, err);
+    // Async tasks
+    if (project) {
+      notifyProjectOwner(updatedRequest as DivisionRequest, project, requestResponse).catch(err => {
+        console.error(`[Non-blocking] Failed to notify project owner:`, err);
       });
 
-      createJobsForRequest(
-        updatedRequest as DivisionRequest,
-        project as Project
-      ).catch(err => {
-        console.error(`[Non-blocking] Failed to create jobs:`, err);
-      });
+      if (requestResponse === 'accept') {
+        createDivisionCalendarEvents(updatedRequest as DivisionRequest, project).catch(err => {
+          console.error(`[Non-blocking] Failed to create calendar events:`, err);
+        });
+
+        createJobsForRequest(updatedRequest as DivisionRequest, project).catch(err => {
+          console.error(`[Non-blocking] Failed to create jobs:`, err);
+        });
+      }
     }
 
   } catch (error: any) {
@@ -176,7 +120,6 @@ async function handler(
   }
 }
 
-// Division engineers can respond to requests
 export default withAuth(handler, [
   'asphalt_engineer',
   'profiling_engineer',

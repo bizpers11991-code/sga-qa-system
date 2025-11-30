@@ -1,6 +1,6 @@
 // api/save-resource.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ResourcesData } from './_lib/sharepointData';
 import { CrewResource, EquipmentResource, ResourceType } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
@@ -13,10 +13,20 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'Type and resource data with an ID are required.' });
         }
 
-        const redis = getRedisInstance();
-        const key = type === 'Crew' ? 'resources:crew' : 'resources:equipment';
+        // Add resourceType to the resource data for SharePoint filtering
+        const resourceWithType = { ...resource, resourceType: type };
 
-        await redis.hset(key, { [resource.id]: JSON.stringify(resource) });
+        // Check if resource exists by getting all and finding by custom id
+        const allResources = await ResourcesData.getAll();
+        const existingResource = allResources.find((r: any) => r.id === resource.id && r.resourceType === type);
+
+        if (existingResource) {
+            // Update existing resource (using SharePoint's internal Id)
+            await ResourcesData.update(existingResource.id, resourceWithType);
+        } else {
+            // Create new resource
+            await ResourcesData.create(resourceWithType);
+        }
 
         res.status(200).json({ message: `${type} resource saved successfully.` });
 

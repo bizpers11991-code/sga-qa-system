@@ -1,33 +1,30 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { ITPTemplatesData } from './_lib/sharepointData';
 import { ItpChecklistData, Role } from '../src/types';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     try {
-        const redis = getRedisInstance();
         const { id } = req.query;
 
         // If a specific ID is requested, fetch only that one
         if (id && typeof id === 'string') {
-            const templateJson = await redis.hget('itp_templates', id);
-            if (!templateJson) {
+            const template = await ITPTemplatesData.getById(id);
+            if (!template) {
                 return res.status(404).json({ message: 'Template not found.' });
             }
-            return res.status(200).json(JSON.parse(templateJson as string));
+            return res.status(200).json(template);
         }
 
         // Otherwise, fetch all templates
-        const allTemplates = await redis.hgetall('itp_templates');
+        const allTemplates = await ITPTemplatesData.getAll();
 
-        if (!allTemplates) {
+        if (!allTemplates || allTemplates.length === 0) {
             return res.status(200).json([]);
         }
 
-        const templatesData: ItpChecklistData[] = Object.values(allTemplates)
-            .map(item => JSON.parse(item as string))
-            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const templatesData = allTemplates.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
         res.status(200).json(templatesData);
 

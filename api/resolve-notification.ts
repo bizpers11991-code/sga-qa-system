@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { NotificationsData } from './_lib/sharepointData';
 import { AppNotification, Role } from '../src/types';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
@@ -18,20 +18,17 @@ async function handler(
       return res.status(400).json({ message: 'Notification ID and resolver name are required.' });
     }
 
-    const redis = getRedisInstance();
-    const key = `notification:${notificationId}`;
-
-    const notificationJson = await redis.get(key) as string | null;
-    if (!notificationJson) {
+    const notification = await NotificationsData.getById(notificationId);
+    if (!notification) {
       return res.status(404).json({ message: 'Notification not found.' });
     }
 
-    const notification: AppNotification = JSON.parse(notificationJson);
-    notification.isResolved = true;
-    notification.resolvedBy = resolvedBy;
-    notification.resolvedAt = new Date().toISOString();
-
-    await redis.set(key, JSON.stringify(notification));
+    // Update notification to mark as resolved
+    await NotificationsData.update(notificationId, {
+      isResolved: true,
+      resolvedBy: resolvedBy,
+      resolvedAt: new Date().toISOString(),
+    });
 
     res.status(200).json({ message: 'Notification resolved successfully.' });
 

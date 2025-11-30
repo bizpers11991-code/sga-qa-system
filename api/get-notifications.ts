@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { NotificationsData } from './_lib/sharepointData';
 import { AppNotification, Role } from '../src/types';
 import { handleApiError } from './_lib/errors.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
@@ -13,18 +13,10 @@ async function handler(
   }
 
   try {
-    const redis = getRedisInstance();
-    const notificationIds = await redis.smembers('notifications:index');
+    const allNotifications = await NotificationsData.getAll();
 
-    if (notificationIds.length === 0) {
-        return res.status(200).json([]);
-    }
-
-    const notificationsJson = await redis.mget(...notificationIds.map(id => `notification:${id}`));
-
-    const notifications = notificationsJson
-        .filter((n): n is string => n !== null)
-        .map(n => JSON.parse(n) as AppNotification)
+    // Filter unresolved notifications and sort by timestamp
+    const notifications = allNotifications
         .filter(n => !n.isResolved) // Only return unresolved notifications
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 

@@ -1,6 +1,6 @@
 // api/get-reports.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { QAPacksData } from './_lib/sharepointData.js';
 import { FinalQaPack, Role, isAdminRole } from '../src/types.js';
 import { migrateReport } from './_lib/migration.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
@@ -12,28 +12,32 @@ async function handler(
 ) {
   const { foremanId } = request.query;
   try {
-    const redis = getRedisInstance();
     const { user } = request;
     const isAdmin = isAdminRole(user.role);
 
-    const jobNumbers = await redis.smembers('reports:index');
+    // Get all QA packs from SharePoint
+    const allReports = await QAPacksData.getAll() as FinalQaPack[];
 
-    if (jobNumbers.length === 0) {
+    if (allReports.length === 0) {
         return response.status(200).json([]);
     }
 
-    const pipeline = redis.pipeline();
-    // For each job, we get the most recent report (which is at index 0 of the list)
-    jobNumbers.forEach(jobNo => pipeline.lindex(`history:${jobNo}`, 0));
-    
-    const results = await pipeline.exec<any[]>();
-    
-    let reports: FinalQaPack[] = results
-        .filter(res => res !== null)
-        .map(res => {
-            const reportData = typeof res === 'string' ? JSON.parse(res) : res;
-            return migrateReport(reportData);
-        });
+    // Group by jobNo to get only the latest version of each report
+    const latestReportsMap = new Map<string, FinalQaPack>();
+
+    for (const report of allReports) {
+        const migrated = migrateReport(report);
+        const jobNo = migrated.job?.jobNo;
+
+        if (!jobNo) continue;
+
+        const existing = latestReportsMap.get(jobNo);
+        if (!existing || (migrated.version && migrated.version > (existing.version || 0))) {
+            latestReportsMap.set(jobNo, migrated);
+        }
+    }
+
+    let reports: FinalQaPack[] = Array.from(latestReportsMap.values());
 
     // Authorization Logic
     if (isAdmin) {

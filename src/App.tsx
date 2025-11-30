@@ -6,6 +6,7 @@ import useAuth from './hooks/useAuth';
 import { RoutesComponent } from './routing/routes';
 import { AppShell } from './components/layout';
 import { useEffect } from 'react';
+import { WeatherProvider } from './context/WeatherContext';
 
 function AppContent() {
   const { isAuthenticated, user } = useAuth();
@@ -22,9 +23,11 @@ function AppContent() {
 
   console.log('[App] User authenticated, showing app shell');
   return (
-    <AppShell>
-      <RoutesComponent />
-    </AppShell>
+    <WeatherProvider autoRefreshMinutes={15}>
+      <AppShell>
+        <RoutesComponent />
+      </AppShell>
+    </WeatherProvider>
   );
 }
 

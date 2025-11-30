@@ -4,6 +4,8 @@ export { default as AsphaltPlacementForm } from './AsphaltPlacementForm';
 export { default as DailyReportForm } from './DailyReportForm';
 export { default as DamagePhotosForm } from './DamagePhotosForm';
 export { default as ItpChecklistForm } from './ItpChecklistForm';
+export { default as ItpForm } from './ItpForm';
+export { default as ItrAsphaltLayingForm } from './ItrAsphaltLayingForm';
 export { default as JobSheetDisplay } from './JobSheetDisplay';
 export { default as JobSheetForm } from './JobSheetForm';
 export { default as MaterialsTable } from './MaterialsTable';

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
+import { QAPacksData } from './_lib/sharepointData';
 import { GoogleGenAI } from "@google/genai";
 import { FinalQaPack, Role } from '../src/types';
 import { sendErrorNotification } from './_lib/teams.js';
@@ -17,18 +17,12 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     try {
-        const redis = getRedisInstance();
-        const jobNumbers = await redis.smembers('reports:index');
+        // Get all QA packs from SharePoint
+        const allReports = await QAPacksData.getAll() as any[];
 
-        if (jobNumbers.length < 5) { // Need a minimum amount of data to find patterns
+        if (allReports.length < 5) { // Need a minimum amount of data to find patterns
             return res.status(200).json({ analysis: "Insufficient data for anomaly detection. At least 5 reports are needed." });
         }
-
-        const pipeline = redis.pipeline();
-        jobNumbers.forEach(jobNo => pipeline.lrange(`history:${jobNo}`, 0, -1));
-        const historyResults = await pipeline.exec<string[][]>();
-
-        const allReports = historyResults.flat().map(r => JSON.parse(r)) as FinalQaPack[];
 
         // Extract relevant data for analysis
         const hazardData = allReports.flatMap(r => r.siteRecord.hazardLog.map(h => h.hazardDescription)).filter(Boolean);

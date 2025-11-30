@@ -1,16 +1,13 @@
 import type { VercelResponse } from '@vercel/node';
-import { getRedisInstance } from './_lib/redis.js';
-import { ScopeReport } from '../src/types.js';
-import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
-import { handleApiError } from './_lib/errors.js';
+import { ScopeReportsData } from './_lib/sharepointData';
+import { withAuth, AuthenticatedRequest } from './_lib/auth';
+import { handleApiError } from './_lib/errors';
 
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
 ) {
   try {
-    const redis = getRedisInstance();
-
     // Get query parameters for filtering
     const {
       projectId,
@@ -19,39 +16,13 @@ async function handler(
       visitType,
     } = request.query;
 
-    // Get all scope report IDs
-    const reportIds = await redis.smembers('scopereports:index');
+    // Get scope reports from SharePoint
+    const reports = await ScopeReportsData.getAll(
+      projectId && typeof projectId === 'string' ? projectId : undefined
+    );
 
-    if (!reportIds || reportIds.length === 0) {
-      return response.status(200).json([]);
-    }
-
-    // Fetch all scope reports
-    const reports: ScopeReport[] = [];
-
-    for (const reportId of reportIds) {
-      const reportKey = `scopereport:${reportId}`;
-      const reportHash = await redis.hgetall(reportKey);
-
-      if (reportHash && Object.keys(reportHash).length > 0) {
-        const report: Partial<ScopeReport> = {};
-        for (const [key, value] of Object.entries(reportHash)) {
-          try {
-            report[key as keyof ScopeReport] = JSON.parse(value as string);
-          } catch {
-            (report as any)[key] = value;
-          }
-        }
-        reports.push(report as ScopeReport);
-      }
-    }
-
-    // Apply filters
+    // Apply additional filters
     let filteredReports = reports;
-
-    if (projectId && typeof projectId === 'string') {
-      filteredReports = filteredReports.filter(r => r.projectId === projectId);
-    }
 
     if (completedBy && typeof completedBy === 'string') {
       filteredReports = filteredReports.filter(r => r.completedBy === completedBy);
