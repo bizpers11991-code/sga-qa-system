@@ -22,18 +22,11 @@ let tokenCache: TokenCacheEntry | null = null;
 let msalApp: ConfidentialClientApplication | null = null;
 
 /**
- * SharePoint scope for Microsoft Graph API
- * Using the default scope for SharePoint Online
+ * Microsoft Graph API scope
+ * Using Graph API instead of SharePoint REST API for better compatibility
+ * This works with standard Azure AD app permissions (Sites.ReadWrite.All)
  */
-const SHAREPOINT_SCOPE = 'https://graph.microsoft.com/.default';
-
-/**
- * Alternative scope specifically for SharePoint sites
- */
-const SHAREPOINT_SITES_SCOPE = (siteUrl: string): string => {
-  const url = new URL(siteUrl);
-  return `${url.protocol}//${url.hostname}/.default`;
-};
+const GRAPH_API_SCOPE = 'https://graph.microsoft.com/.default';
 
 /**
  * Validates SharePoint configuration from environment variables
@@ -151,8 +144,8 @@ export async function getAccessToken(forceRefresh: boolean = false): Promise<str
     const config = getSharePointConfig();
     const app = getMsalApp(config);
 
-    // Use SharePoint-specific scope
-    const scope = SHAREPOINT_SITES_SCOPE(config.siteUrl);
+    // Use Microsoft Graph API scope (works with standard Azure AD app permissions)
+    const scope = GRAPH_API_SCOPE;
 
     // Request token using client credentials flow
     const result: AuthenticationResult | null = await app.acquireTokenByClientCredential({

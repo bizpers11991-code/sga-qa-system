@@ -1,7 +1,7 @@
 /**
  * @file src/lib/sharepoint/connection.ts
- * @description SharePoint REST API client with retry logic and error handling
- * Provides low-level HTTP methods for SharePoint operations
+ * @description Microsoft Graph API client for SharePoint operations
+ * Uses Graph API instead of SharePoint REST API for better Azure AD compatibility
  */
 
 import { getAccessToken } from './auth.js';
@@ -12,19 +12,40 @@ import {
 } from './types.js';
 
 /**
+ * Microsoft Graph API base URL
+ */
+const GRAPH_API_BASE = 'https://graph.microsoft.com/v1.0';
+
+/**
  * Default retry configuration
- * SharePoint has rate limits, so we use exponential backoff
  */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
-  initialDelay: 1000, // 1 second
-  maxDelay: 10000, // 10 seconds
+  initialDelay: 1000,
+  maxDelay: 10000,
   backoffMultiplier: 2,
 };
 
 /**
- * SharePoint REST API client
- * Handles authentication, requests, retries, and error handling
+ * Cache for site ID and list IDs to minimize API calls
+ */
+interface GraphCache {
+  siteId: string | null;
+  listIds: Map<string, string>;
+  lastRefresh: number;
+}
+
+const cache: GraphCache = {
+  siteId: null,
+  listIds: new Map(),
+  lastRefresh: 0,
+};
+
+// Cache TTL: 1 hour
+const CACHE_TTL = 60 * 60 * 1000;
+
+/**
+ * SharePoint client using Microsoft Graph API
  */
 export class SharePointClient {
   private siteUrl: string;
@@ -45,14 +66,110 @@ export class SharePointClient {
   }
 
   /**
-   * Build full URL for SharePoint REST API endpoint
+   * Get site ID from SharePoint URL (cached)
    */
-  private buildUrl(endpoint: string): string {
-    // Remove trailing slash from site URL
-    const baseUrl = this.siteUrl.replace(/\/$/, '');
-    // Ensure endpoint starts with /
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    return `${baseUrl}${path}`;
+  private async getSiteId(): Promise<string> {
+    // Return cached value if valid
+    if (cache.siteId && Date.now() - cache.lastRefresh < CACHE_TTL) {
+      return cache.siteId;
+    }
+
+    const token = await getAccessToken();
+    const url = new URL(this.siteUrl);
+    const graphUrl = `${GRAPH_API_BASE}/sites/${url.hostname}:${url.pathname}`;
+
+    const response = await fetch(graphUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw await this.parseError(response);
+    }
+
+    const data = await response.json();
+    cache.siteId = data.id;
+    cache.lastRefresh = Date.now();
+    return data.id;
+  }
+
+  /**
+   * Get list ID by display name (cached)
+   */
+  private async getListId(listName: string): Promise<string> {
+    // Return cached value if available
+    const cachedId = cache.listIds.get(listName);
+    if (cachedId && Date.now() - cache.lastRefresh < CACHE_TTL) {
+      return cachedId;
+    }
+
+    const token = await getAccessToken();
+    const siteId = await this.getSiteId();
+    const graphUrl = `${GRAPH_API_BASE}/sites/${siteId}/lists?$filter=displayName eq '${listName}'`;
+
+    const response = await fetch(graphUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw await this.parseError(response);
+    }
+
+    const data = await response.json();
+    if (!data.value || data.value.length === 0) {
+      throw new SharePointApiError(
+        `List not found: ${listName}`,
+        404,
+        'LIST_NOT_FOUND',
+        false
+      );
+    }
+
+    const listId = data.value[0].id;
+    cache.listIds.set(listName, listId);
+    return listId;
+  }
+
+  /**
+   * Parse endpoint from SharePoint REST API format to Graph API
+   * Converts: /_api/web/lists/getbytitle('Jobs')/items
+   * To: /sites/{siteId}/lists/{listId}/items
+   */
+  private async buildGraphUrl(endpoint: string): Promise<string> {
+    const siteId = await this.getSiteId();
+
+    // Parse SharePoint REST API endpoint format
+    const listMatch = endpoint.match(/\/lists\/getbytitle\('([^']+)'\)(.*)/i);
+    if (listMatch) {
+      const listName = listMatch[1];
+      const remainder = listMatch[2] || '';
+      const listId = await this.getListId(listName);
+
+      // Convert /items(123) to /items/123
+      let graphRemainder = remainder.replace(/\/items\((\d+)\)/, '/items/$1');
+
+      // For item operations, we need to expand fields
+      if (graphRemainder.includes('/items') && !graphRemainder.includes('$expand')) {
+        const separator = graphRemainder.includes('?') ? '&' : '?';
+        if (!graphRemainder.includes('/items/')) {
+          // List items query - add $expand=fields
+          graphRemainder += `${separator}$expand=fields`;
+        }
+      }
+
+      return `${GRAPH_API_BASE}/sites/${siteId}/lists/${listId}${graphRemainder}`;
+    }
+
+    // Handle direct list access
+    const directListMatch = endpoint.match(/\/lists\/([^/]+)(.*)/i);
+    if (directListMatch) {
+      const listName = directListMatch[1];
+      const remainder = directListMatch[2] || '';
+      const listId = await this.getListId(listName);
+      return `${GRAPH_API_BASE}/sites/${siteId}/lists/${listId}${remainder}`;
+    }
+
+    // Default: just append to site endpoint
+    return `${GRAPH_API_BASE}/sites/${siteId}${endpoint}`;
   }
 
   /**
@@ -67,7 +184,6 @@ export class SharePointClient {
    */
   private calculateRetryDelay(attempt: number, retryAfter?: number): number {
     if (retryAfter) {
-      // Respect server's retry-after header
       return Math.min(retryAfter * 1000, this.retryConfig.maxDelay);
     }
 
@@ -80,10 +196,10 @@ export class SharePointClient {
   }
 
   /**
-   * Parse SharePoint error response
+   * Parse error response
    */
   private async parseError(response: Response): Promise<SharePointApiError> {
-    let errorMessage = `SharePoint API error: ${response.status} ${response.statusText}`;
+    let errorMessage = `Graph API error: ${response.status} ${response.statusText}`;
     let errorCode = `HTTP_${response.status}`;
     let retryAfter: number | undefined;
 
@@ -94,27 +210,22 @@ export class SharePointClient {
         const errorData = await response.json();
 
         if (errorData.error) {
-          errorMessage = errorData.error.message?.value || errorData.error.message || errorMessage;
+          errorMessage = errorData.error.message || errorMessage;
           errorCode = errorData.error.code || errorCode;
-        } else if (errorData['odata.error']) {
-          errorMessage = errorData['odata.error'].message?.value || errorMessage;
-          errorCode = errorData['odata.error'].code || errorCode;
         }
       }
     } catch (e) {
       // If error parsing fails, use default message
     }
 
-    // Check for Retry-After header (throttling)
     const retryAfterHeader = response.headers.get('retry-after');
     if (retryAfterHeader) {
       retryAfter = parseInt(retryAfterHeader, 10);
     }
 
-    // Determine if error is retryable
-    const isRetryable = response.status === 429 || // Too Many Requests
-                        response.status === 503 || // Service Unavailable
-                        response.status === 504;   // Gateway Timeout
+    const isRetryable = response.status === 429 ||
+                        response.status === 503 ||
+                        response.status === 504;
 
     return new SharePointApiError(
       errorMessage,
@@ -126,6 +237,38 @@ export class SharePointClient {
   }
 
   /**
+   * Convert Graph API response to SharePoint REST API format for compatibility
+   */
+  private convertResponse(data: any, isItemQuery: boolean = false): any {
+    // Graph API returns items in 'value' array, SharePoint REST uses 'results'
+    if (data.value && Array.isArray(data.value)) {
+      if (isItemQuery) {
+        // Convert items with fields to flat format
+        return {
+          results: data.value.map((item: any) => ({
+            Id: parseInt(item.id, 10),
+            ...item.fields,
+            // Preserve metadata
+            __metadata: { id: item.id, etag: item['@odata.etag'] },
+          })),
+        };
+      }
+      return { results: data.value };
+    }
+
+    // Single item with fields
+    if (data.fields) {
+      return {
+        Id: parseInt(data.id, 10),
+        ...data.fields,
+        __metadata: { id: data.id, etag: data['@odata.etag'] },
+      };
+    }
+
+    return data;
+  }
+
+  /**
    * Execute HTTP request with retry logic
    */
   private async executeRequest<T = any>(
@@ -134,55 +277,44 @@ export class SharePointClient {
     attempt: number = 0
   ): Promise<T> {
     try {
-      // Get access token
       const token = await getAccessToken();
+      const url = await this.buildGraphUrl(endpoint);
+      const isItemQuery = endpoint.includes('/items');
 
-      // Build request URL
-      const url = this.buildUrl(endpoint);
-
-      // Prepare headers
       const headers = new Headers(options.headers);
       headers.set('Authorization', `Bearer ${token}`);
-      headers.set('Accept', 'application/json;odata=verbose');
+      headers.set('Accept', 'application/json');
 
       if (options.method !== 'GET' && !headers.has('Content-Type')) {
-        headers.set('Content-Type', 'application/json;odata=verbose');
+        headers.set('Content-Type', 'application/json');
       }
 
-      // Make request
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
-      // Handle success
       if (response.ok) {
         const contentType = response.headers.get('content-type');
 
-        // Return empty object for 204 No Content
         if (response.status === 204) {
           return {} as T;
         }
 
-        // Parse JSON response
         if (contentType?.includes('application/json')) {
           const data = await response.json();
-          // SharePoint wraps responses in d property
-          return data.d || data;
+          return this.convertResponse(data, isItemQuery) as T;
         }
 
-        // Return raw response for non-JSON
         return response as any;
       }
 
-      // Handle error
       const error = await this.parseError(response);
 
-      // Retry if error is retryable and we haven't exceeded max retries
       if (error.isRetryable && attempt < this.retryConfig.maxRetries) {
         const delay = this.calculateRetryDelay(attempt, error.retryAfter);
         console.warn(
-          `[SharePoint] Request failed (attempt ${attempt + 1}/${this.retryConfig.maxRetries}), ` +
+          `[Graph API] Request failed (attempt ${attempt + 1}/${this.retryConfig.maxRetries}), ` +
           `retrying in ${delay}ms:`,
           error.message
         );
@@ -193,12 +325,10 @@ export class SharePointClient {
       throw error;
 
     } catch (error) {
-      // If it's already a SharePointApiError, rethrow it
       if (isSharePointError(error)) {
         throw error;
       }
 
-      // Wrap other errors
       throw new SharePointApiError(
         `Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         500,
@@ -219,28 +349,36 @@ export class SharePointClient {
   }
 
   /**
-   * POST request
+   * POST request (create item)
    */
   async post<T = any>(endpoint: string, data?: any, headers?: HeadersInit): Promise<T> {
+    // Convert data format for Graph API
+    let graphData = data;
+    if (data && endpoint.includes('/items')) {
+      // Remove __metadata if present (SharePoint REST format)
+      const { __metadata, ...fields } = data;
+      graphData = { fields };
+    }
+
     return this.executeRequest<T>(endpoint, {
       method: 'POST',
       headers,
-      body: data ? JSON.stringify(data) : undefined,
+      body: graphData ? JSON.stringify(graphData) : undefined,
     });
   }
 
   /**
-   * PATCH request (used for updates in SharePoint)
+   * PATCH request (update item)
    */
   async patch<T = any>(endpoint: string, data: any, headers?: HeadersInit): Promise<T> {
-    const mergeHeaders = new Headers(headers);
-    mergeHeaders.set('IF-MATCH', '*'); // Update regardless of etag
-    mergeHeaders.set('X-HTTP-Method', 'MERGE'); // SharePoint uses MERGE for updates
+    // Convert data format for Graph API
+    const { __metadata, ...fields } = data;
+    const graphData = { fields };
 
     return this.executeRequest<T>(endpoint, {
-      method: 'POST', // SharePoint uses POST with X-HTTP-Method header
-      headers: mergeHeaders,
-      body: JSON.stringify(data),
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(graphData),
     });
   }
 
@@ -248,45 +386,48 @@ export class SharePointClient {
    * DELETE request
    */
   async delete(endpoint: string, headers?: HeadersInit): Promise<void> {
-    const deleteHeaders = new Headers(headers);
-    deleteHeaders.set('IF-MATCH', '*');
-
     await this.executeRequest(endpoint, {
       method: 'DELETE',
-      headers: deleteHeaders,
+      headers,
     });
   }
 
   /**
-   * Upload file (multipart)
+   * Upload file to document library
    */
   async upload(endpoint: string, file: Buffer | Blob, fileName: string): Promise<any> {
     const token = await getAccessToken();
-    const url = this.buildUrl(endpoint);
+    const siteId = await this.getSiteId();
+
+    // Extract library name from endpoint
+    const libMatch = endpoint.match(/\/([^/]+)\/files\/add/i);
+    const libraryName = libMatch ? libMatch[1] : 'Shared Documents';
+    const listId = await this.getListId(libraryName);
+
+    const url = `${GRAPH_API_BASE}/sites/${siteId}/lists/${listId}/drive/root:/${fileName}:/content`;
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json;odata=verbose',
+        'Content-Type': 'application/octet-stream',
       },
-      body: file as any, // Browser Blob or Node Buffer
+      body: file as any,
     });
 
     if (!response.ok) {
       throw await this.parseError(response);
     }
 
-    const data = await response.json();
-    return data.d || data;
+    return response.json();
   }
 
   /**
-   * Download file
+   * Download file from document library
    */
   async download(endpoint: string): Promise<Response> {
     const token = await getAccessToken();
-    const url = this.buildUrl(endpoint);
+    const url = await this.buildGraphUrl(endpoint);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -303,12 +444,10 @@ export class SharePointClient {
   }
 
   /**
-   * Get form digest value (required for POST/PATCH/DELETE operations in some scenarios)
+   * Get form digest value - Not needed for Graph API, returns empty string for compatibility
    */
   async getFormDigest(): Promise<string> {
-    const endpoint = '/_api/contextinfo';
-    const result = await this.post<any>(endpoint);
-    return result.GetContextWebInformation?.FormDigestValue || '';
+    return '';
   }
 }
 
@@ -319,7 +458,6 @@ let sharedClient: SharePointClient | null = null;
 
 /**
  * Get shared SharePoint client instance
- * Reuses the same client across API calls for better performance
  */
 export function getSharePointClient(): SharePointClient {
   if (!sharedClient) {
@@ -336,4 +474,13 @@ export function createSharePointClient(
   retryConfig?: Partial<RetryConfig>
 ): SharePointClient {
   return new SharePointClient(siteUrl, retryConfig);
+}
+
+/**
+ * Clear the cache (useful for testing)
+ */
+export function clearGraphCache(): void {
+  cache.siteId = null;
+  cache.listIds.clear();
+  cache.lastRefresh = 0;
 }
