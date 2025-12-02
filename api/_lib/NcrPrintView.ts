@@ -9,6 +9,24 @@ const Detail: React.FC<{ label: string; value?: React.ReactNode; colSpan?: numbe
     )
 );
 
+const Watermark: React.FC = () => (
+    React.createElement('div', {
+        style: {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(-45deg)',
+            fontSize: '120px',
+            fontWeight: 'bold',
+            color: '#e0e0e0',
+            opacity: 0.15,
+            zIndex: -1,
+            userSelect: 'none',
+            pointerEvents: 'none'
+        }
+    }, 'SGA')
+);
+
 const PageHeader: React.FC<{ report: NonConformanceReport }> = ({ report }) => (
     React.createElement('header', { className: "page-header" },
         React.createElement(SgaLogo, { style: { height: '1.5cm', width: 'auto' } }),
@@ -48,6 +66,7 @@ const NcrPrintView: React.FC<{ report: NonConformanceReport }> = ({ report }) =>
               .detail-value { font-size: 10pt; color: #111827; white-space: pre-wrap; word-break: break-word; padding: 8px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; min-height: 40px; }
             `),
             
+            React.createElement(Watermark),
             React.createElement(PageHeader, { report: report }),
             React.createElement('h2', null, 'Non-Conformance Report'),
 

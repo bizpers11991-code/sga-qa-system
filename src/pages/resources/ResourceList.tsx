@@ -380,10 +380,13 @@ const ResourceList = () => {
         ? { ...newCrew, id: `crew-${Date.now()}` }
         : { ...newEquipment, id: `equip-${Date.now()}` };
 
+      // ResourceType expects capitalized 'Crew' | 'Equipment'
+      const resourceType = addType === 'crew' ? 'Crew' : 'Equipment';
+
       const response = await fetch('/api/save-resource', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: addType, resource: resourceData }),
+        body: JSON.stringify({ type: resourceType, resource: resourceData }),
       });
 
       if (!response.ok) {

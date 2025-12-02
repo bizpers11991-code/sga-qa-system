@@ -1,27 +1,38 @@
+// api/generate-scope-report-pdf.ts
+/**
+ * Business Logic Flow: Scope Report PDF Generation
+ * 1.  An authenticated user requests a PDF for a specific scope report.
+ * 2.  The scope report data is fetched from SharePoint.
+ * 3.  The data is rendered into an HTML print view using a React component.
+ * 4.  A headless browser (Puppeteer) converts the HTML into a PDF document.
+ * 5.  The PDF is named according to the standardized format (e.g., SCR-2025-001-01.pdf).
+ * 6.  The generated PDF is streamed directly to the user for download.
+ */
 import type { VercelResponse } from '@vercel/node';
 import { ScopeReportsData } from './_lib/sharepointData.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError, NotFoundError } from './_lib/errors.js';
+import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
+import ReactDOMServer from 'react-dom/server';
+import React from 'react';
+import ScopeReportPrintView from './_lib/ScopeReportPrintView.js';
 
-/**
- * Generate Scope Report PDF
- *
- * This endpoint generates a PDF for a scope report.
- * In production, this would use puppeteer/playwright to render ScopeReportPrintView.tsx
- * Similar to the existing generate-jobsheet-pdf.ts implementation.
- */
 async function handler(
   request: AuthenticatedRequest,
   response: VercelResponse
 ) {
+  if (request.method !== 'GET') {
+    return response.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  const { id } = request.query;
+  if (!id || typeof id !== 'string') {
+    throw new NotFoundError('Scope Report', { providedId: id });
+  }
+
+  let browser = null;
   try {
-    // Get scope report ID from query parameter
-    const { id } = request.query;
-
-    if (!id || typeof id !== 'string') {
-      throw new NotFoundError('Scope Report', { providedId: id });
-    }
-
     // Fetch scope report from SharePoint
     const report = await ScopeReportsData.getById(id);
 
@@ -29,64 +40,57 @@ async function handler(
       throw new NotFoundError('Scope Report', { reportId: id });
     }
 
-    // TODO: Implement PDF generation using puppeteer
-    // This should:
-    // 1. Render ScopeReportPrintView.tsx with the report data
-    // 2. Convert to PDF using puppeteer
-    // 3. Return PDF binary
+    // Render React component to HTML
+    const reportHtml = ReactDOMServer.renderToStaticMarkup(
+      React.createElement(ScopeReportPrintView, { report })
+    );
+    const fullHtml = `<!DOCTYPE html><html><head><title>Scope Report - ${report.reportNumber}</title><meta charset="utf-8" /></head><body>${reportHtml}</body></html>`;
 
-    // For now, return a placeholder response
-    console.log(`PDF generation requested for scope report ${report.reportNumber}`);
+    // Launch Puppeteer
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: (chromium as any).defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: (chromium as any).headless,
+      ignoreHTTPSErrors: true,
+    } as any);
 
-    return response.status(501).json({
-      message: 'PDF generation not yet implemented',
-      reportNumber: report.reportNumber,
-      reportId: id,
-      note: 'Will be implemented similar to generate-jobsheet-pdf.ts',
-    });
-
-    /* Production implementation would look like:
-
-    const browser = await chromium.launch();
     const page = await browser.newPage();
+    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
 
-    // Render the print view
-    await page.setContent(renderToString(<ScopeReportPrintView report={report} />));
-
-    // Generate PDF
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '0.3in',
-        right: '1.8in',
-        bottom: '0.5in',
-        left: '0.5in',
-      },
+      margin: { top: '1.5cm', right: '1.5cm', bottom: '2cm', left: '1.5cm' },
+      timeout: 60000,
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>',
+      footerTemplate: `<div style="font-size: 8pt; width: 100%; padding: 8px 15mm; color: #6b7280; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-top: 1px solid #e5e7eb;">
+          <span style="flex: 0 0 33%; text-align: left;">Doc ID: ${report.reportNumber} v1.0</span>
+          <span style="flex: 0 0 34%; text-align: center;">Printed copies are uncontrolled documents</span>
+          <span style="flex: 0 0 33%; text-align: right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+      </div>`
     });
 
-    await browser.close();
-
-    // Set response headers
+    // Send PDF back to client
     response.setHeader('Content-Type', 'application/pdf');
-    response.setHeader(
-      'Content-Disposition',
-      `attachment; filename="Scope_Report_${report.reportNumber}.pdf"`
-    );
-
-    return response.status(200).send(pdfBuffer);
-    */
+    response.setHeader('Content-Disposition', `attachment; filename="Scope_Report_${report.reportNumber}.pdf"`);
+    response.send(pdfBuffer);
 
   } catch (error: any) {
     await handleApiError({
       res: response,
       error,
-      title: 'Generate Scope Report PDF Failure',
+      title: 'Scope Report PDF Generation Failure',
       context: {
         reportId: request.query.id,
         authenticatedUserId: request.user.id,
       },
     });
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

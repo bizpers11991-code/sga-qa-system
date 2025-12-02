@@ -4,13 +4,24 @@
  * This module handles all business logic for tender handover operations:
  * - Handover number generation
  * - SharePoint folder structure creation
- * - Site visit calendar event automation
+ * - Site visit calendar event automation (via M365 Group Calendar)
  * - Notifications to project owner and scoping person
+ *
+ * Architecture:
+ * - All calendar automation happens IN-APP (reliable)
+ * - Power Automate/Flows only used for notifications
  */
 
-import { TenderHandover } from '../../src/types.js';
+import { TenderHandover, Project } from '../../src/types.js';
 import { createFolder } from './sharepoint.js';
 import { ValidationError } from './errors.js';
+import {
+  CalendarService,
+  createSiteVisitEvents as createCalendarSiteVisits,
+  createProjectCalendarEvent,
+  SiteVisitSchedule
+} from './calendar.js';
+import { sendManagementUpdate } from './teams.js';
 
 /**
  * Generate next handover number in format: HO-YYYY-NNN
@@ -35,6 +46,30 @@ export const generateHandoverNumber = (existingHandovers: TenderHandover[]): str
   }
 
   // Generate next number with zero-padding
+  const nextNumber = (maxNumber + 1).toString().padStart(3, '0');
+  return `${yearPrefix}${nextNumber}`;
+};
+
+/**
+ * Generate project number in format: PRJ-YYYY-NNN
+ */
+export const generateProjectNumber = (existingProjects: Project[]): string => {
+  const currentYear = new Date().getFullYear();
+  const yearPrefix = `PRJ-${currentYear}-`;
+
+  const currentYearProjects = existingProjects.filter(p =>
+    p.projectNumber.startsWith(yearPrefix)
+  );
+
+  let maxNumber = 0;
+  for (const project of currentYearProjects) {
+    const numberPart = project.projectNumber.split('-')[2];
+    const num = parseInt(numberPart, 10);
+    if (!isNaN(num) && num > maxNumber) {
+      maxNumber = num;
+    }
+  }
+
   const nextNumber = (maxNumber + 1).toString().padStart(3, '0');
   return `${yearPrefix}${nextNumber}`;
 };
@@ -105,13 +140,6 @@ export const createProjectFolderStructure = async (
   try {
     console.log(`Creating SharePoint folder structure for project ${projectNumber}`);
 
-    // Note: SharePoint library management would typically be done through
-    // the existing sharepoint.ts integration, but this requires extending
-    // the library to support project folders.
-
-    // For now, we'll log the action and return success.
-    // In production, this should create the actual folders via Graph API.
-
     const folders = [
       'ScopeReports',
       'JobSheets',
@@ -122,12 +150,16 @@ export const createProjectFolderStructure = async (
       'Photos',
     ];
 
-    console.log(`Would create folders for ${projectNumber}:`, folders);
+    // Create base project folder
+    const basePath = `02_Projects/${projectNumber}`;
+    await createFolder(basePath);
 
-    // TODO: Implement actual SharePoint folder creation
-    // This requires extending the sharepoint.ts library to support
-    // nested folder structures within document libraries
+    // Create subfolders
+    for (const folder of folders) {
+      await createFolder(`${basePath}/${folder}`);
+    }
 
+    console.log(`Successfully created folder structure for ${projectNumber}`);
     return true;
   } catch (error) {
     console.error('Error creating project folder structure:', error);
@@ -188,59 +220,192 @@ export const calculateSiteVisitDates = (
 
 /**
  * Create calendar events for site visits
+ * Uses M365 Group Calendar via Microsoft Graph API
  * Returns array of event IDs
  */
 export const createSiteVisitEvents = async (
   handover: TenderHandover,
-  siteVisits: { visitType: string; scheduledDate: string }[]
-): Promise<string[]> => {
+  scopingPersonEmail: string,
+  scopingPersonName: string
+): Promise<SiteVisitSchedule[]> => {
   try {
     console.log(`Creating site visit calendar events for ${handover.projectName}`);
 
-    // TODO: Implement Teams/Outlook calendar event creation
-    // This requires extending the existing calendar integration
-    // For now, we'll return mock event IDs
+    const projectDate = new Date(handover.estimatedStartDate);
 
-    const eventIds: string[] = [];
+    // Create calendar events using the CalendarService
+    const siteVisits = await createCalendarSiteVisits(
+      handover.handoverNumber,
+      handover.clientName,
+      projectDate,
+      handover.clientTier,
+      scopingPersonEmail,
+      scopingPersonName,
+      handover.location
+    );
 
-    for (const visit of siteVisits) {
-      const eventId = `event_${handover.id}_${visit.visitType}_${Date.now()}`;
-      console.log(`Would create ${visit.visitType} site visit on ${visit.scheduledDate}`);
-      eventIds.push(eventId);
-    }
-
-    return eventIds;
+    console.log(`Created ${siteVisits.length} site visit calendar events`);
+    return siteVisits;
   } catch (error) {
     console.error('Error creating site visit events:', error);
+    // Return empty array on error - don't block handover creation
     return [];
   }
 };
 
 /**
+ * Create project calendar event (overall project timeline)
+ * Called when handover is submitted and project is created
+ */
+export const createProjectEvent = async (
+  handover: TenderHandover,
+  projectNumber: string,
+  projectOwnerEmail: string,
+  projectOwnerName: string
+): Promise<string | null> => {
+  try {
+    console.log(`Creating project calendar event for ${projectNumber}`);
+
+    const eventId = await createProjectCalendarEvent({
+      projectNumber,
+      projectName: handover.projectName,
+      client: handover.clientName,
+      clientTier: handover.clientTier,
+      location: handover.location,
+      startDate: handover.estimatedStartDate,
+      endDate: handover.estimatedEndDate,
+      projectOwnerEmail,
+      projectOwnerName,
+    });
+
+    console.log(`Created project calendar event: ${eventId}`);
+    return eventId;
+  } catch (error) {
+    console.error('Error creating project calendar event:', error);
+    return null;
+  }
+};
+
+/**
  * Send notification to project owner and scoping person
+ * Uses Teams webhooks for notifications (Power Automate only for complex flows)
  */
 export const sendHandoverNotifications = async (
-  handover: TenderHandover
+  handover: TenderHandover,
+  projectOwnerName: string,
+  scopingPersonName: string
 ): Promise<void> => {
   try {
     console.log(`Sending handover notifications for ${handover.projectName}`);
 
-    // TODO: Implement Teams/Email notification
-    // This should notify:
-    // 1. Project Owner - You've been assigned as project owner
-    // 2. Scoping Person - You've been assigned to complete scope reports
+    // Send Teams notification to management channel
+    await sendManagementUpdate(
+      `New Project Handover: ${handover.handoverNumber}`,
+      `A new project has been handed over and is ready for scoping.`,
+      [
+        { name: 'Project', value: handover.projectName },
+        { name: 'Client', value: `${handover.clientName} (${handover.clientTier})` },
+        { name: 'Location', value: handover.location },
+        { name: 'Project Owner', value: projectOwnerName },
+        { name: 'Scoping Person', value: scopingPersonName },
+        { name: 'Est. Start', value: new Date(handover.estimatedStartDate).toLocaleDateString('en-AU') },
+        { name: 'Est. End', value: new Date(handover.estimatedEndDate).toLocaleDateString('en-AU') },
+      ]
+    );
 
-    console.log(`Would notify:
-      - Project Owner: ${handover.projectOwnerId}
-      - Scoping Person: ${handover.scopingPersonId}
-      - Handover Number: ${handover.handoverNumber}
-      - Project: ${handover.projectName}
-      - Client: ${handover.clientName} (${handover.clientTier})
-    `);
-
-    // In production, this should use the existing Teams notification system
-    // from api/_lib/teams.ts
+    console.log(`Handover notifications sent successfully`);
   } catch (error) {
     console.error('Error sending handover notifications:', error);
+    // Don't throw - notifications are not critical path
   }
+};
+
+/**
+ * Complete handover workflow
+ * Orchestrates all handover automation:
+ * 1. Validate handover data
+ * 2. Create SharePoint folder structure
+ * 3. Create site visit calendar events (in-app automation)
+ * 4. Create project calendar event (in-app automation)
+ * 5. Send notifications (via Teams webhooks)
+ */
+export const completeHandoverWorkflow = async (
+  handover: TenderHandover,
+  projectOwnerEmail: string,
+  projectOwnerName: string,
+  scopingPersonEmail: string,
+  scopingPersonName: string,
+  existingProjects: Project[]
+): Promise<{
+  success: boolean;
+  projectNumber?: string;
+  projectCalendarEventId?: string;
+  siteVisits?: SiteVisitSchedule[];
+  errors?: string[];
+}> => {
+  const errors: string[] = [];
+
+  try {
+    // 1. Validate
+    validateHandover(handover);
+
+    // 2. Generate project number
+    const projectNumber = generateProjectNumber(existingProjects);
+
+    // 3. Create SharePoint folders
+    const foldersCreated = await createProjectFolderStructure(projectNumber);
+    if (!foldersCreated) {
+      errors.push('Failed to create SharePoint folders');
+    }
+
+    // 4. Create site visit calendar events
+    const siteVisits = await createSiteVisitEvents(
+      handover,
+      scopingPersonEmail,
+      scopingPersonName
+    );
+    if (siteVisits.length === 0) {
+      errors.push('Failed to create site visit calendar events');
+    }
+
+    // 5. Create project calendar event
+    const projectCalendarEventId = await createProjectEvent(
+      handover,
+      projectNumber,
+      projectOwnerEmail,
+      projectOwnerName
+    );
+    if (!projectCalendarEventId) {
+      errors.push('Failed to create project calendar event');
+    }
+
+    // 6. Send notifications
+    await sendHandoverNotifications(handover, projectOwnerName, scopingPersonName);
+
+    return {
+      success: errors.length === 0,
+      projectNumber,
+      projectCalendarEventId: projectCalendarEventId || undefined,
+      siteVisits,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  } catch (error: any) {
+    console.error('Handover workflow failed:', error);
+    return {
+      success: false,
+      errors: [...errors, error.message || 'Unknown error'],
+    };
+  }
+};
+
+export default {
+  generateHandoverNumber,
+  generateProjectNumber,
+  validateHandover,
+  createProjectFolderStructure,
+  calculateSiteVisitDates,
+  createSiteVisitEvents,
+  createProjectEvent,
+  sendHandoverNotifications,
+  completeHandoverWorkflow,
 };

@@ -2,6 +2,24 @@ import React from 'react';
 import { SamplingPlan } from '../../src/types';
 import SgaLogo from './SgaLogo.js';
 
+const Watermark: React.FC = () => (
+    React.createElement('div', {
+        style: {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(-45deg)',
+            fontSize: '120px',
+            fontWeight: 'bold',
+            color: '#e0e0e0',
+            opacity: 0.15,
+            zIndex: -1,
+            userSelect: 'none',
+            pointerEvents: 'none'
+        }
+    }, 'SGA')
+);
+
 const Detail: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
     React.createElement('div', null,
         React.createElement('p', { style: { fontSize: '8pt', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '2px' } }, label),
@@ -12,6 +30,7 @@ const Detail: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, v
 const SamplingPlanPrintView: React.FC<{ plan: SamplingPlan }> = ({ plan }) => {
     return (
         React.createElement('div', { style: { fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '10pt' } },
+             React.createElement(Watermark),
              React.createElement('style', null, `
               body { -webkit-print-color-adjust: exact; }
               .table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 24px; }
