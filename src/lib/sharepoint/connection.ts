@@ -349,6 +349,9 @@ export class SharePointClient {
       const headers = new Headers(options.headers);
       headers.set('Authorization', `Bearer ${token}`);
       headers.set('Accept', 'application/json');
+      // Allow queries on non-indexed columns (needed for $orderby on custom fields)
+      // This is safe for lists with < 5000 items
+      headers.set('Prefer', 'HonorNonIndexedQueriesWarningMayFailRandomly');
 
       if (options.method !== 'GET' && !headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');

@@ -1,8 +1,7 @@
 // api/_lib/jobSheetHandler.ts
 import { Buffer } from 'buffer';
 import { Job } from '../../src/types.js';
-import { getR2Config } from './r2.js';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { uploadFile } from './sharepointFiles.js';
 import { sendJobSheetNotification } from './teams.js';
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
@@ -13,18 +12,10 @@ import JobSheetPrintView from './JobSheetPrintView.js';
 
 
 const uploadPdf = async (
-    r2: ReturnType<typeof getR2Config>, 
-    key: string, 
-    body: Buffer, 
+    key: string,
+    body: Buffer,
 ): Promise<string> => {
-    const command = new PutObjectCommand({
-        Bucket: r2.bucketName,
-        Key: key,
-        Body: body,
-        ContentType: 'application/pdf',
-    });
-    await (r2.client as any).send(command);
-    return `${r2.publicUrl}/${key}`;
+    return await uploadFile(key, body, 'application/pdf');
 };
 
 
@@ -36,7 +27,6 @@ export const generateAndSendJobSheetPdf = async (job: Job): Promise<void> => {
     
     let browser = null;
     try {
-        const r2 = getR2Config();
         const timestamp = new Date().toISOString();
         const datePath = timestamp.split('T')[0];
 
@@ -72,9 +62,9 @@ export const generateAndSendJobSheetPdf = async (job: Job): Promise<void> => {
             </div>`
         });
 
-        // 3. Upload PDF to R2
+        // 3. Upload PDF to SharePoint
         const pdfKey = `job-sheets/${datePath}/${job.jobNo}_${timestamp}.pdf`;
-        const pdfUrl = await uploadPdf(r2, pdfKey, Buffer.from(pdfBuffer));
+        const pdfUrl = await uploadPdf(pdfKey, Buffer.from(pdfBuffer));
 
         // 4. Send notification to Discord
         await sendJobSheetNotification(job, pdfUrl);

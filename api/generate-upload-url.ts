@@ -1,12 +1,19 @@
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getR2Config } from './_lib/r2.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import type { VercelResponse } from '@vercel/node';
 import { handleApiError } from './_lib/errors.js';
 
-const UPLOAD_EXPIRATION_SECONDS = 60; // 1 minute
-
+/**
+ * Generate Upload URL
+ *
+ * Since we're now using SharePoint for file storage, this endpoint returns
+ * a direct upload endpoint that the client should use with the confirm-document-upload
+ * endpoint to upload files via the server (which handles SharePoint auth).
+ *
+ * Flow:
+ * 1. Client calls this endpoint to get an upload key
+ * 2. Client sends file + key to confirm-document-upload endpoint
+ * 3. Server uploads to SharePoint and stores metadata
+ */
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
@@ -18,27 +25,24 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'fileName and fileType are required.' });
         }
 
-        const r2 = getR2Config();
-        
         // Sanitize file name and create a unique key
         const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const key = `documents/${Date.now()}_${sanitizedFileName}`;
+        const datePath = new Date().toISOString().split('T')[0];
+        const key = `documents/${datePath}/${Date.now()}_${sanitizedFileName}`;
 
-        const command = new PutObjectCommand({
-            Bucket: r2.bucketName,
-            Key: key,
-            ContentType: fileType,
+        // Return the key for use with the upload endpoint
+        // The actual upload happens server-side via confirm-document-upload
+        res.status(200).json({
+            key,
+            uploadEndpoint: '/api/upload-document',
+            message: 'Use the uploadEndpoint to upload your file with this key'
         });
-        
-        const url = await getSignedUrl(r2.client, command, { expiresIn: UPLOAD_EXPIRATION_SECONDS });
-
-        res.status(200).json({ url, key });
 
     } catch (error: any) {
         await handleApiError({
             res,
             error,
-            title: 'Generate Presigned URL Failure',
+            title: 'Generate Upload Key Failure',
             context: { fileName: req.body.fileName, authenticatedUserId: req.user.id },
         });
     }

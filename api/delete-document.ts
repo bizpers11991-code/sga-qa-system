@@ -1,5 +1,4 @@
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getR2Config } from './_lib/r2.js';
+import { deleteFile } from './_lib/sharepointFiles.js';
 import { DocumentsData } from './_lib/sharepointData.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import type { VercelResponse } from '@vercel/node';
@@ -16,18 +15,15 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(400).json({ message: 'Document ID and File Key are required for deletion.' });
         }
 
-        // 1. Delete file from R2
-        const r2 = getR2Config();
-        const command = new DeleteObjectCommand({
-            Bucket: r2.bucketName,
-            Key: fileKey,
-        });
-        // FIX: The S3Client type was not resolving correctly, causing a 'send does not exist' error.
-        // Following the pattern in other API files (e.g., submit-incident), casting to 'any'
-        // bypasses the incorrect type check and allows the code to compile.
-        await (r2.client as any).send(command);
+        // 1. Delete file from SharePoint document library
+        try {
+            await deleteFile(fileKey);
+        } catch (fileError: any) {
+            // Log but don't fail if file doesn't exist
+            console.warn(`[Delete Document] File deletion warning for ${fileKey}:`, fileError.message);
+        }
 
-        // 2. Delete metadata from SharePoint
+        // 2. Delete metadata from SharePoint list
         await DocumentsData.delete(id);
 
         res.status(200).json({ message: 'Document deleted successfully.' });

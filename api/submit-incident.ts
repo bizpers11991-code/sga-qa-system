@@ -11,8 +11,7 @@
  */
 import { Buffer } from 'buffer';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getR2Config } from './_lib/r2.js';
+import { uploadFile } from './_lib/sharepointFiles.js';
 import { IncidentsData } from './_lib/sharepointData.js';
 import { IncidentReport, IncidentPhoto } from '../src/types.js';
 import { sendErrorNotification, sendIncidentNotification } from './_lib/teams.js';
@@ -26,19 +25,11 @@ const base64ToBuffer = (base64: string): Buffer => {
 };
 
 const uploadAsset = async (
-    r2: ReturnType<typeof getR2Config>, 
-    key: string, 
-    body: Buffer, 
+    key: string,
+    body: Buffer,
     contentType: string
 ): Promise<string> => {
-    const command = new PutObjectCommand({
-        Bucket: r2.bucketName,
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-    });
-    await (r2.client as any).send(command);
-    return `${r2.publicUrl}/${key}`;
+    return await uploadFile(key, body, contentType);
 };
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
@@ -56,8 +47,6 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
         if (!isAdmin && report.reporterId !== user.id) {
             return res.status(403).json({ message: 'Forbidden: You can only submit reports for yourself.' });
         }
-
-        const r2 = getR2Config();
 
         // Generate sequential incident counter from SharePoint
         const year = new Date().getFullYear();
@@ -83,7 +72,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
                 report.photos.map(async (photo: IncidentPhoto, index: number) => {
                     const buffer = base64ToBuffer(photo.data);
                     const key = `incidents/${datePath}/${reportId}_${index}.jpeg`;
-                    return await uploadAsset(r2, key, buffer, 'image/jpeg');
+                    return await uploadAsset(key, buffer, 'image/jpeg');
                 })
             );
         }

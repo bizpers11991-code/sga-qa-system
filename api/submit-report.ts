@@ -13,8 +13,7 @@
  */
 import { Buffer } from 'buffer';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getR2Config } from './_lib/r2.js';
+import { uploadFile } from './_lib/sharepointFiles.js';
 import { QAPacksData } from './_lib/sharepointData.js';
 import { generateReportSummary } from './_lib/copilot.js';
 import { sendSummaryNotification, sendQAPackNotification, sendBiosecurityNotification } from './_lib/teams.js';
@@ -39,22 +38,11 @@ const base64ToBuffer = (base64: string): Buffer => {
 };
 
 const uploadAsset = async (
-    r2: ReturnType<typeof getR2Config>, 
-    key: string, 
-    body: Buffer, 
+    key: string,
+    body: Buffer,
     contentType: string
 ): Promise<string> => {
-    const command = new PutObjectCommand({
-        Bucket: r2.bucketName,
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-    });
-    // FIX: The S3Client type was not resolving correctly, causing a 'send does not exist' error.
-    // Following the pattern in other API files (e.g., submit-incident), casting to 'any'
-    // bypasses the incorrect type check and allows the code to compile.
-    await (r2.client as any).send(command);
-    return `${r2.publicUrl}/${key}`;
+    return await uploadFile(key, body, contentType);
 };
 
 // Asynchronous background task for automated analysis
@@ -112,18 +100,17 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             return res.status(403).json({ message: 'Forbidden: You can only submit reports for jobs assigned to you.' });
         }
 
-        const r2 = getR2Config();
         const timestamp = new Date().toISOString();
         const datePath = timestamp.split('T')[0]; // YYYY-MM-DD
 
-        // --- 1. Handle File Uploads to R2 ---
+        // --- 1. Handle File Uploads to SharePoint ---
         const { foremanPhoto, sitePhotos, damagePhotos, job, jobSheet } = report;
         const jobNo = job.jobNo;
 
         if (foremanPhoto) {
             const buffer = base64ToBuffer(foremanPhoto);
             const key = `biosecurity/${datePath}/${jobNo}_${timestamp}.jpeg`;
-            report.foremanPhotoUrl = await uploadAsset(r2, key, buffer, 'image/jpeg');
+            report.foremanPhotoUrl = await uploadAsset(key, buffer, 'image/jpeg');
         }
 
         if (sitePhotos?.length > 0) {
@@ -131,17 +118,17 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
                 sitePhotos.map(async (photo: SitePhoto, index: number) => {
                     const buffer = base64ToBuffer(photo.data);
                     const key = `site-photos/${datePath}/${jobNo}_${index}_${timestamp}.jpeg`;
-                    return await uploadAsset(r2, key, buffer, 'image/jpeg');
+                    return await uploadAsset(key, buffer, 'image/jpeg');
                 })
             );
         }
-        
+
         if (damagePhotos?.length > 0) {
             report.damagePhotoUrls = await Promise.all(
                 damagePhotos.map(async (photo: DamagePhoto, index: number) => {
                     const buffer = base64ToBuffer(photo.data);
                     const key = `damage-photos/${datePath}/${jobNo}_${index}_${timestamp}.jpeg`;
-                    return await uploadAsset(r2, key, buffer, 'image/jpeg');
+                    return await uploadAsset(key, buffer, 'image/jpeg');
                 })
             );
         }
@@ -151,7 +138,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
                 jobSheet.jobSheetImages.map(async (photo: JobSheetImage, index: number) => {
                     const buffer = base64ToBuffer(photo.data);
                     const key = `job-sheet-images/${datePath}/${jobNo}_${index}_${timestamp}.jpeg`;
-                    return await uploadAsset(r2, key, buffer, 'image/jpeg');
+                    return await uploadAsset(key, buffer, 'image/jpeg');
                 })
             );
         }
@@ -203,7 +190,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
             // Standardized naming convention
             const sanitizedProjectName = (job.projectName || 'Project').replace(/[^a-zA-Z0-9-_\s]/g, '').replace(/\s+/g, '-');
             const pdfKey = `qa-packs/${datePath}/SGA-${jobNo}-${sanitizedProjectName}-QAPack.pdf`;
-            report.pdfUrl = await uploadAsset(r2, pdfKey, Buffer.from(pdfBuffer), 'application/pdf');
+            report.pdfUrl = await uploadAsset(pdfKey, Buffer.from(pdfBuffer), 'application/pdf');
         } finally {
             if (browser) await browser.close();
         }
