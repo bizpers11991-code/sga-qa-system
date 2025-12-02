@@ -196,9 +196,22 @@ export const sendBiosecurityNotification = async (report: FinalQaPack) => {
 };
 
 export const sendErrorNotification = async (title: string, error: Error, context: Record<string, any> = {}) => {
-    const contextFacts = Object.entries(context).map(([key, value]) => ({
-        "name": key, "value": `\`${value}\``
-    }));
+    const contextFacts = Object.entries(context).map(([key, value]) => {
+        // Safely convert value to string, handling objects and arrays
+        let stringValue: string;
+        if (value === null || value === undefined) {
+            stringValue = String(value);
+        } else if (typeof value === 'object') {
+            try {
+                stringValue = JSON.stringify(value);
+            } catch {
+                stringValue = '[Object]';
+            }
+        } else {
+            stringValue = String(value);
+        }
+        return { "name": key, "value": `\`${stringValue}\`` };
+    });
 
     const payload = {
         "@type": "MessageCard",

@@ -130,6 +130,65 @@ export class SharePointClient {
   }
 
   /**
+   * Transform OData query parameters from SharePoint REST format to Graph API format
+   * Graph API requires 'fields/ColumnName' format for list item properties
+   */
+  private transformODataParams(queryString: string): string {
+    if (!queryString) return queryString;
+
+    // Known SharePoint system fields that exist on listItem directly (not in fields/)
+    const systemFields = ['id', 'createdDateTime', 'lastModifiedDateTime', 'webUrl', 'createdBy', 'lastModifiedBy'];
+
+    // Transform $orderby parameters
+    queryString = queryString.replace(/\$orderby=([^&]+)/gi, (match, orderByValue) => {
+      const parts = orderByValue.split(',').map((part: string) => {
+        const trimmed = part.trim();
+        const [fieldName, direction] = trimmed.split(/\s+/);
+
+        // If it's a system field or already prefixed, leave it alone
+        if (systemFields.includes(fieldName.toLowerCase()) || fieldName.startsWith('fields/')) {
+          return trimmed;
+        }
+
+        // Prefix custom fields with 'fields/'
+        return direction ? `fields/${fieldName} ${direction}` : `fields/${fieldName}`;
+      });
+      return `$orderby=${parts.join(',')}`;
+    });
+
+    // Transform $filter parameters
+    queryString = queryString.replace(/\$filter=([^&]+)/gi, (match, filterValue) => {
+      // Decode the filter first
+      let decoded = decodeURIComponent(filterValue);
+
+      // Find field references (word before 'eq', 'ne', 'gt', 'lt', 'ge', 'le', 'contains', etc.)
+      // But skip fields that are already prefixed or are system fields
+      decoded = decoded.replace(/\b([A-Za-z][A-Za-z0-9_]*)\s+(eq|ne|gt|lt|ge|le)\s+/gi, (m, field, op) => {
+        if (systemFields.includes(field.toLowerCase()) || field.startsWith('fields/')) {
+          return m;
+        }
+        return `fields/${field} ${op} `;
+      });
+
+      return `$filter=${encodeURIComponent(decoded)}`;
+    });
+
+    // Transform $select parameters
+    queryString = queryString.replace(/\$select=([^&]+)/gi, (match, selectValue) => {
+      const fields = selectValue.split(',').map((field: string) => {
+        const trimmed = field.trim();
+        if (systemFields.includes(trimmed.toLowerCase()) || trimmed.startsWith('fields/')) {
+          return trimmed;
+        }
+        return `fields/${trimmed}`;
+      });
+      return `$select=${fields.join(',')}`;
+    });
+
+    return queryString;
+  }
+
+  /**
    * Parse endpoint from SharePoint REST API format to Graph API
    * Converts: /_api/web/lists/getbytitle('Jobs')/items
    * To: /sites/{siteId}/lists/{listId}/items
@@ -141,11 +200,17 @@ export class SharePointClient {
     const listMatch = endpoint.match(/\/lists\/getbytitle\('([^']+)'\)(.*)/i);
     if (listMatch) {
       const listName = listMatch[1];
-      const remainder = listMatch[2] || '';
+      let remainder = listMatch[2] || '';
       const listId = await this.getListId(listName);
 
       // Convert /items(123) to /items/123
       let graphRemainder = remainder.replace(/\/items\((\d+)\)/, '/items/$1');
+
+      // Transform OData parameters for Graph API compatibility
+      if (graphRemainder.includes('?')) {
+        const [path, query] = graphRemainder.split('?');
+        graphRemainder = path + '?' + this.transformODataParams(query);
+      }
 
       // For item operations, we need to expand fields
       if (graphRemainder.includes('/items') && !graphRemainder.includes('$expand')) {

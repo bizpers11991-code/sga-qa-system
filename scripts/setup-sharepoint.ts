@@ -326,6 +326,44 @@ const SGA_LISTS: ListDefinition[] = [
       { name: 'LastServiceDate', displayName: 'Last Service Date', type: 'DateTime' },
       { name: 'Notes', displayName: 'Notes', type: 'Note' },
     ]
+  },
+  {
+    name: 'DailyReports',
+    description: 'Daily work reports and summaries',
+    columns: [
+      { name: 'ReportDate', displayName: 'Report Date', type: 'DateTime', required: true },
+      { name: 'Division', displayName: 'Division', type: 'Choice', required: true, choices: ['Asphalt', 'Profiling', 'Spray', 'All'] },
+      { name: 'ForemanId', displayName: 'Foreman ID', type: 'Text', required: true },
+      { name: 'ForemanName', displayName: 'Foreman Name', type: 'Text', required: true },
+      { name: 'JobsCompleted', displayName: 'Jobs Completed', type: 'Number' },
+      { name: 'TotalArea', displayName: 'Total Area (m²)', type: 'Number' },
+      { name: 'WeatherConditions', displayName: 'Weather Conditions', type: 'Text' },
+      { name: 'CrewCount', displayName: 'Crew Count', type: 'Number' },
+      { name: 'EquipmentUsed', displayName: 'Equipment Used', type: 'Note' },
+      { name: 'Issues', displayName: 'Issues/Delays', type: 'Note' },
+      { name: 'Notes', displayName: 'Notes', type: 'Note' },
+      { name: 'AISummary', displayName: 'AI Summary', type: 'Note' },
+      { name: 'Status', displayName: 'Status', type: 'Choice', required: true, choices: ['Draft', 'Submitted', 'Reviewed', 'Approved'] },
+    ]
+  },
+  {
+    name: 'ActivityLog',
+    description: 'System activity and audit log',
+    columns: [
+      { name: 'ActivityType', displayName: 'Activity Type', type: 'Choice', required: true, choices: ['Create', 'Update', 'Delete', 'View', 'Login', 'Export', 'Submit', 'Approve', 'Reject', 'System'] },
+      { name: 'EntityType', displayName: 'Entity Type', type: 'Choice', required: true, choices: ['Job', 'Project', 'Tender', 'QAPack', 'Incident', 'NCR', 'ScopeReport', 'Resource', 'Foreman', 'User', 'System'] },
+      { name: 'EntityId', displayName: 'Entity ID', type: 'Text' },
+      { name: 'EntityTitle', displayName: 'Entity Title', type: 'Text' },
+      { name: 'UserId', displayName: 'User ID', type: 'Text', required: true },
+      { name: 'UserName', displayName: 'User Name', type: 'Text' },
+      { name: 'UserEmail', displayName: 'User Email', type: 'Text' },
+      { name: 'Description', displayName: 'Description', type: 'Note', required: true },
+      { name: 'PreviousValue', displayName: 'Previous Value', type: 'Note' },
+      { name: 'NewValue', displayName: 'New Value', type: 'Note' },
+      { name: 'IpAddress', displayName: 'IP Address', type: 'Text' },
+      { name: 'UserAgent', displayName: 'User Agent', type: 'Text' },
+      { name: 'Timestamp', displayName: 'Timestamp', type: 'DateTime', required: true },
+    ]
   }
 ];
 
