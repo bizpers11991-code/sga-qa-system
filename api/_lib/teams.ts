@@ -1,7 +1,13 @@
 // api/_lib/teams.ts
-import { FinalQaPack, Job, IncidentReport, QaPack } from '../../src/types.js';
+/**
+ * Microsoft Teams Notifications via Power Automate
+ *
+ * Sends formatted HTML messages to Teams channels via Power Automate HTTP triggers.
+ * Power Automate flows use "Post message in a chat or channel" action.
+ */
+import { FinalQaPack, Job, IncidentReport } from '../../src/types.js';
 
-// Environment variables for MS Teams Incoming Webhooks
+// Environment variables for Power Automate webhook URLs
 const WEBHOOK_URL_SUMMARY = process.env.TEAMS_WEBHOOK_URL_SUMMARY;
 const WEBHOOK_URL_QA_PACK = process.env.TEAMS_WEBHOOK_URL_QA_PACK;
 const WEBHOOK_URL_BIOSECURITY = process.env.TEAMS_WEBHOOK_URL_BIOSECURITY;
@@ -15,75 +21,91 @@ const WEBHOOK_URL_ASPHALT_QAPACK = process.env.TEAMS_WEBHOOK_URL_ASPHALT_QAPACK;
 const WEBHOOK_URL_PROFILING_QAPACK = process.env.TEAMS_WEBHOOK_URL_PROFILING_QAPACK;
 const WEBHOOK_URL_SPRAY_QAPACK = process.env.TEAMS_WEBHOOK_URL_SPRAY_QAPACK;
 
+/**
+ * Division colors for visual consistency
+ */
+const DIVISION_COLORS: Record<string, string> = {
+    'Asphalt': '#F59E0B',    // Orange
+    'Profiling': '#3B82F6',  // Blue
+    'Spray': '#8B5CF6',      // Violet
+};
 
-const sendTeamsNotification = async (webhookUrl: string | undefined, payload: object) => {
+/**
+ * Send notification to Teams via Power Automate
+ * Payload is sent as JSON, Power Automate extracts the 'message' field
+ */
+const sendTeamsNotification = async (webhookUrl: string | undefined, message: string, title?: string) => {
     if (!webhookUrl) {
         console.warn('MS Teams webhook URL is not set. Skipping notification.');
         return;
     }
     try {
+        // Send as JSON with message field - Power Automate will use triggerBody()
+        const payload = {
+            title: title || 'SGA QA System Notification',
+            message: message,
+            timestamp: new Date().toISOString(),
+        };
+
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
+
         if (!response.ok) {
             const responseText = await response.text();
             console.error(`MS Teams notification failed with status ${response.status}:`, responseText);
+        } else {
+            console.log(`Teams notification sent successfully to ${title || 'channel'}`);
         }
     } catch (error) {
         console.error('Error sending MS Teams notification:', error);
     }
 };
 
-const createAdaptiveCard = (title: string, summary: string, facts: { name: string, value: string }[], theme: 'default' | 'emphasis' | 'good' | 'attention' | 'warning' = 'default') => {
-    return {
-        "type": "message",
-        "attachments": [
-            {
-                "contentType": "application/vnd.microsoft.card.adaptive",
-                "content": {
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.4",
-                    "style": theme,
-                    "body": [
-                        {
-                            "type": "TextBlock",
-                            "text": title,
-                            "weight": "Bolder",
-                            "size": "Medium"
-                        },
-                        {
-                            "type": "TextBlock",
-                            "text": summary,
-                            "wrap": true
-                        },
-                        {
-                            "type": "FactSet",
-                            "facts": facts
-                        }
-                    ]
-                }
-            }
-        ]
-    };
+/**
+ * Format facts as HTML table rows
+ */
+const formatFacts = (facts: { name: string; value: string }[]): string => {
+    return facts
+        .map(f => `<b>${f.name}:</b> ${f.value}`)
+        .join('<br>');
+};
+
+/**
+ * Create a formatted HTML message
+ */
+const createHtmlMessage = (
+    title: string,
+    subtitle: string,
+    facts: { name: string; value: string }[],
+    color?: string,
+    actionUrl?: string,
+    actionLabel?: string
+): string => {
+    const colorBar = color ? `<span style="color:${color}">■</span> ` : '';
+    const factsList = formatFacts(facts);
+    const actionLink = actionUrl && actionLabel
+        ? `<br><br><a href="${actionUrl}">${actionLabel}</a>`
+        : '';
+
+    return `${colorBar}<b>${title}</b><br><br>${subtitle}<br><br>${factsList}${actionLink}`;
 };
 
 // --- Notification Functions ---
 
 export const sendSummaryNotification = async (report: FinalQaPack, summary: string) => {
-    const payload = createAdaptiveCard(
-        `Executive Summary: ${report.job.jobNo}`,
+    const message = createHtmlMessage(
+        `📊 Executive Summary: ${report.job.jobNo}`,
         summary,
         [
             { name: "Client", value: report.job.client },
             { name: "Foreman", value: report.submittedBy },
             { name: "Date", value: new Date(report.timestamp).toLocaleDateString('en-AU') },
-        ],
-        'emphasis'
+        ]
     );
-    await sendTeamsNotification(WEBHOOK_URL_SUMMARY, payload);
+    await sendTeamsNotification(WEBHOOK_URL_SUMMARY, message, 'Executive Summary');
 };
 
 export const sendQAPackNotification = async (report: FinalQaPack) => {
@@ -92,41 +114,38 @@ export const sendQAPackNotification = async (report: FinalQaPack) => {
     switch (report.job.division) {
         case 'Asphalt':
             webhookUrl = WEBHOOK_URL_ASPHALT_QAPACK || WEBHOOK_URL_ASPHALT_JOBS;
-            color = "F59E0B"; // Orange
+            color = DIVISION_COLORS['Asphalt'];
             break;
         case 'Profiling':
             webhookUrl = WEBHOOK_URL_PROFILING_QAPACK || WEBHOOK_URL_PROFILING_JOBS;
-            color = "3B82F6"; // Blue
+            color = DIVISION_COLORS['Profiling'];
             break;
         case 'Spray':
             webhookUrl = WEBHOOK_URL_SPRAY_QAPACK || WEBHOOK_URL_SPRAY_JOBS;
-            color = "8B5CF6"; // Violet
+            color = DIVISION_COLORS['Spray'];
             break;
         default:
-            webhookUrl = WEBHOOK_URL_QA_PACK; // Fallback to the generic QA pack channel
-            color = "16A34A"; // Green
+            webhookUrl = WEBHOOK_URL_QA_PACK;
+            color = '#16A34A'; // Green
     }
-    
-    const payload = {
-        "@type": "MessageCard",
-        "summary": `QA Pack Submitted for ${report.job.jobNo}`,
-        "themeColor": color,
-        "title": `QA Pack Submitted: ${report.job.jobNo} - ${report.job.client}`,
-        "sections": [{
-            "activityTitle": `A new **${report.job.division}** QA Pack has been submitted by **${report.submittedBy}**.`,
-            "facts": [
-                { "name": "Location", "value": report.job.location },
-                { "name": "Total Tonnes", "value": report.sgaDailyReport.works.reduce((acc, w) => acc + (parseFloat(w.tonnes) || 0), 0).toFixed(2) }
-            ],
-            "markdown": true
-        }],
-        "potentialAction": [{
-            "@type": "OpenUri",
-            "name": "View PDF",
-            "targets": [{ "os": "default", "uri": report.pdfUrl }]
-        }]
-    };
-    await sendTeamsNotification(webhookUrl, payload);
+
+    const totalTonnes = report.sgaDailyReport.works
+        .reduce((acc, w) => acc + (parseFloat(w.tonnes) || 0), 0)
+        .toFixed(2);
+
+    const message = createHtmlMessage(
+        `✅ QA Pack Submitted: ${report.job.jobNo}`,
+        `A new <b>${report.job.division}</b> QA Pack has been submitted by <b>${report.submittedBy}</b>.`,
+        [
+            { name: "Client", value: report.job.client },
+            { name: "Location", value: report.job.location },
+            { name: "Total Tonnes", value: totalTonnes },
+        ],
+        color,
+        report.pdfUrl,
+        '📄 View PDF'
+    );
+    await sendTeamsNotification(webhookUrl, message, 'QA Pack Submitted');
 };
 
 export const sendJobSheetNotification = async (job: Job, pdfUrl: string) => {
@@ -135,69 +154,54 @@ export const sendJobSheetNotification = async (job: Job, pdfUrl: string) => {
     switch (job.division) {
         case 'Asphalt':
             webhookUrl = WEBHOOK_URL_ASPHALT_JOBS;
-            color = "F59E0B"; // Orange
+            color = DIVISION_COLORS['Asphalt'];
             break;
         case 'Profiling':
             webhookUrl = WEBHOOK_URL_PROFILING_JOBS;
-            color = "3B82F6"; // Blue
+            color = DIVISION_COLORS['Profiling'];
             break;
         case 'Spray':
             webhookUrl = WEBHOOK_URL_SPRAY_JOBS;
-            color = "8B5CF6"; // Violet
+            color = DIVISION_COLORS['Spray'];
             break;
         default:
             console.warn(`No specific Teams webhook for division: ${job.division}. Skipping job sheet notification.`);
             return;
     }
 
-    const payload = {
-        "@type": "MessageCard",
-        "summary": `New Job Sheet for ${job.jobNo}`,
-        "themeColor": color,
-        "title": `New Job Sheet Created: ${job.jobNo} - ${job.client}`,
-        "sections": [{
-            "activitySubtitle": `A new **${job.division}** job has been created and is ready for review.`,
-            "facts": [
-                { "name": "Project", "value": job.projectName },
-                { "name": "Location", "value": job.location },
-                { "name": "Job Date", "value": new Date(job.jobDate).toLocaleDateString('en-AU', { timeZone: 'Australia/Perth' }) }
-            ],
-            "markdown": true
-        }],
-        "potentialAction": [{
-            "@type": "OpenUri",
-            "name": "View Job Sheet PDF",
-            "targets": [{ "os": "default", "uri": pdfUrl }]
-        }]
-    };
-    await sendTeamsNotification(webhookUrl, payload);
+    const message = createHtmlMessage(
+        `📋 New Job Sheet: ${job.jobNo}`,
+        `A new <b>${job.division}</b> job has been created and is ready for review.`,
+        [
+            { name: "Client", value: job.client },
+            { name: "Project", value: job.projectName },
+            { name: "Location", value: job.location },
+            { name: "Job Date", value: new Date(job.jobDate).toLocaleDateString('en-AU', { timeZone: 'Australia/Perth' }) },
+        ],
+        color,
+        pdfUrl,
+        '📄 View Job Sheet PDF'
+    );
+    await sendTeamsNotification(webhookUrl, message, 'New Job Sheet');
 };
 
 export const sendBiosecurityNotification = async (report: FinalQaPack) => {
     if (!report.foremanPhotoUrl) return;
-    const payload = {
-        "@type": "MessageCard",
-        "summary": `Biosecurity Check-in: ${report.submittedBy}`,
-        "themeColor": "FBBF24", // Yellow
-        "title": `Biosecurity Check-in: ${report.submittedBy}`,
-        "sections": [{
-            "activityTitle": `Foreman verification for job **${report.job.jobNo}**.`,
-            "facts": [
-                { "name": "Client", "value": report.job.client },
-                { "name": "Location", "value": report.job.location }
-            ],
-            "images": [
-                { "image": report.foremanPhotoUrl, "title": report.submittedBy }
-            ],
-            "markdown": true
-        }]
-    };
-    await sendTeamsNotification(WEBHOOK_URL_BIOSECURITY, payload);
+
+    const message = createHtmlMessage(
+        `🌿 Biosecurity Check-in: ${report.submittedBy}`,
+        `Foreman verification for job <b>${report.job.jobNo}</b>.`,
+        [
+            { name: "Client", value: report.job.client },
+            { name: "Location", value: report.job.location },
+        ],
+        '#FBBF24' // Yellow
+    );
+    await sendTeamsNotification(WEBHOOK_URL_BIOSECURITY, message, 'Biosecurity Check-in');
 };
 
 export const sendErrorNotification = async (title: string, error: Error, context: Record<string, any> = {}) => {
     const contextFacts = Object.entries(context).map(([key, value]) => {
-        // Safely convert value to string, handling objects and arrays
         let stringValue: string;
         if (value === null || value === undefined) {
             stringValue = String(value);
@@ -210,65 +214,49 @@ export const sendErrorNotification = async (title: string, error: Error, context
         } else {
             stringValue = String(value);
         }
-        return { "name": key, "value": `\`${stringValue}\`` };
+        return { name: key, value: stringValue };
     });
 
-    const payload = {
-        "@type": "MessageCard",
-        "summary": `Error: ${title}`,
-        "themeColor": "DC2626", // Red
-        "title": `🚨 Application Error: ${title}`,
-        "sections": [{
-            "activityTitle": "An error occurred in a serverless function.",
-            "facts": [
-                { "name": "Error Message", "value": `\`${error.message}\`` },
-                ...contextFacts
-            ],
-            "markdown": true
-        }, {
-            "title": "Stack Trace",
-            "text": "```\n" + (error.stack ? error.stack.substring(0, 4000) : "Not available") + "\n```"
-        }]
-    };
-    await sendTeamsNotification(WEBHOOK_URL_ERROR, payload);
+    const stackPreview = error.stack ? error.stack.substring(0, 500) : 'Not available';
+
+    const message = `🚨 <b>Application Error: ${title}</b><br><br>` +
+        `<b>Error Message:</b> ${error.message}<br><br>` +
+        formatFacts(contextFacts) +
+        `<br><br><b>Stack Trace:</b><br><code>${stackPreview}</code>`;
+
+    await sendTeamsNotification(WEBHOOK_URL_ERROR, message, 'Application Error');
 };
 
 export const sendIncidentNotification = async (incident: IncidentReport) => {
-    const payload = {
-        "@type": "MessageCard",
-        "summary": `New Incident Reported: ${incident.reportId}`,
-        "themeColor": "F97316", // Orange
-        "title": `New Incident Reported: ${incident.type}`,
-        "sections": [{
-            "activityTitle": `A new **${incident.type}** report (${incident.reportId}) has been submitted by **${incident.reportedBy}**.`,
-            "facts": [
-                { "name": "Date", "value": new Date(incident.dateOfIncident).toLocaleDateString('en-AU') },
-                { "name": "Location", "value": incident.location },
-                { "name": "Job No.", "value": incident.jobNo || 'N/A' }
-            ],
-            "markdown": true
-        }, {
-            "title": "Description",
-            "text": incident.description
-        }]
-    };
-    await sendTeamsNotification(WEBHOOK_URL_INCIDENTS, payload);
-};
-
-// New function for sending consolidated daily summaries
-export const sendDailySummaryNotification = async (summary: string, reportCount: number, date: string) => {
-    const payload = createAdaptiveCard(
-        `End of Day Summary for ${date}`,
-        summary,
-        [{ name: "Total Reports Summarized", value: String(reportCount) }],
-        'emphasis'
+    const message = createHtmlMessage(
+        `⚠️ New ${incident.type} Reported`,
+        `A new <b>${incident.type}</b> report (<b>${incident.reportId}</b>) has been submitted by <b>${incident.reportedBy}</b>.`,
+        [
+            { name: "Date", value: new Date(incident.dateOfIncident).toLocaleDateString('en-AU') },
+            { name: "Location", value: incident.location },
+            { name: "Job No.", value: incident.jobNo || 'N/A' },
+        ],
+        '#F97316' // Orange
     );
-    await sendTeamsNotification(WEBHOOK_URL_MANAGEMENT, payload);
+
+    const fullMessage = message + `<br><br><b>Description:</b><br>${incident.description}`;
+    await sendTeamsNotification(WEBHOOK_URL_INCIDENTS, fullMessage, 'Incident Report');
 };
 
-// --- New Scheduled Notification Functions ---
+export const sendDailySummaryNotification = async (summary: string, reportCount: number, date: string) => {
+    const message = createHtmlMessage(
+        `📈 End of Day Summary for ${date}`,
+        summary,
+        [{ name: "Total Reports Summarized", value: String(reportCount) }]
+    );
+    await sendTeamsNotification(WEBHOOK_URL_MANAGEMENT, message, 'Daily Summary');
+};
 
-export const sendManagementUpdate = async (title: string, summary: string, facts: {name: string, value: string}[]) => {
-     const payload = createAdaptiveCard(title, summary, facts, 'default');
-     await sendTeamsNotification(WEBHOOK_URL_MANAGEMENT, payload);
+export const sendManagementUpdate = async (title: string, summary: string, facts: { name: string; value: string }[]) => {
+    const message = createHtmlMessage(
+        `📢 ${title}`,
+        summary,
+        facts
+    );
+    await sendTeamsNotification(WEBHOOK_URL_MANAGEMENT, message, title);
 };
