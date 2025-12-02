@@ -29,6 +29,7 @@ const ResourceList = lazy(() => import('../pages/resources/ResourceList'));
 const AdminPanel = lazy(() => import('../pages/admin/AdminPanel'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 const ChatPage = lazy(() => import('../pages/ChatPage'));
+const Analytics = lazy(() => import('../pages/Analytics'));
 
 // Loading fallback component (no AppShell - already wrapped in App.tsx)
 const LoadingFallback = () => (
@@ -92,6 +93,9 @@ export const RoutesComponent = () => {
 
       {/* Chat Routes */}
       <Route path="/chat" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><ChatPage /></Suspense></ProtectedRoute>} />
+
+      {/* Analytics Routes - Management */}
+      <Route path="/analytics" element={<ProtectedRoute><RoleGuard allowedRoles={['management_admin', 'scheduler_admin', 'hseq_manager', 'asphalt_engineer', 'profiling_engineer', 'spray_admin']}><Suspense fallback={<LoadingFallback />}><Analytics /></Suspense></RoleGuard></ProtectedRoute>} />
 
       {/* Admin Routes - Admin only */}
       <Route path="/admin" element={<ProtectedRoute><RoleGuard allowedRoles={['management_admin', 'scheduler_admin']}><Suspense fallback={<LoadingFallback />}><AdminPanel /></Suspense></RoleGuard></ProtectedRoute>} />
