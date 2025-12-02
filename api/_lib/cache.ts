@@ -2,7 +2,8 @@
  * Caching Service for SGA QA System
  *
  * Provides a unified caching layer that supports:
- * - Vercel KV (production)
+ * - Upstash Redis (production) - 500,000 free commands/month
+ * - Vercel KV (alternative)
  * - In-memory cache (development/fallback)
  *
  * Cache TTLs are configured based on data volatility:
@@ -11,6 +12,8 @@
  * - Dynamic (jobs, incidents): 1 minute
  */
 
+import { Redis } from '@upstash/redis';
+
 // In-memory cache for development and fallback
 interface CacheEntry<T> {
   data: T;
@@ -18,6 +21,24 @@ interface CacheEntry<T> {
 }
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
+
+// Lazy-initialized Redis client
+let redisClient: Redis | null = null;
+
+function getRedisClient(): Redis | null {
+  if (redisClient) return redisClient;
+
+  // Check for Upstash Redis credentials
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+  if (url && token) {
+    redisClient = new Redis({ url, token });
+    return redisClient;
+  }
+
+  return null;
+}
 
 // Cache configuration
 export const CacheTTL = {
@@ -85,10 +106,13 @@ export const CacheKeys = {
 } as const;
 
 /**
- * Check if Vercel KV is available
+ * Check if Redis is available (Upstash or Vercel KV)
  */
-function isVercelKVAvailable(): boolean {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+function isRedisAvailable(): boolean {
+  return !!(
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  );
 }
 
 /**
@@ -96,10 +120,10 @@ function isVercelKVAvailable(): boolean {
  */
 export async function cacheGet<T>(key: string): Promise<T | null> {
   try {
-    if (isVercelKVAvailable()) {
-      // Use Vercel KV
-      const { kv } = await import('@vercel/kv');
-      const value = await kv.get<T>(key);
+    const redis = getRedisClient();
+    if (redis) {
+      // Use Upstash Redis
+      const value = await redis.get<T>(key);
       return value;
     } else {
       // Use in-memory cache
@@ -124,10 +148,10 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
  */
 export async function cacheSet<T>(key: string, value: T, ttlSeconds: number = CacheTTL.DEFAULT): Promise<void> {
   try {
-    if (isVercelKVAvailable()) {
-      // Use Vercel KV
-      const { kv } = await import('@vercel/kv');
-      await kv.set(key, value, { ex: ttlSeconds });
+    const redis = getRedisClient();
+    if (redis) {
+      // Use Upstash Redis with expiration
+      await redis.set(key, value, { ex: ttlSeconds });
     } else {
       // Use in-memory cache
       memoryCache.set(key, {
@@ -145,9 +169,9 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number = Ca
  */
 export async function cacheDelete(key: string): Promise<void> {
   try {
-    if (isVercelKVAvailable()) {
-      const { kv } = await import('@vercel/kv');
-      await kv.del(key);
+    const redis = getRedisClient();
+    if (redis) {
+      await redis.del(key);
     } else {
       memoryCache.delete(key);
     }
@@ -161,12 +185,12 @@ export async function cacheDelete(key: string): Promise<void> {
  */
 export async function cacheDeletePattern(pattern: string): Promise<void> {
   try {
-    if (isVercelKVAvailable()) {
-      const { kv } = await import('@vercel/kv');
-      // Vercel KV supports SCAN with pattern
-      const keys = await kv.keys(pattern);
+    const redis = getRedisClient();
+    if (redis) {
+      // Upstash Redis supports SCAN with pattern
+      const keys = await redis.keys(pattern);
       if (keys.length > 0) {
-        await kv.del(...keys);
+        await redis.del(...keys);
       }
     } else {
       // In-memory: find and delete matching keys
@@ -227,21 +251,23 @@ export async function cacheOrFetch<T>(
  * Get cache statistics (for monitoring)
  */
 export async function getCacheStats(): Promise<{
-  type: 'vercel-kv' | 'in-memory';
+  type: 'upstash-redis' | 'in-memory';
   size?: number;
   keys?: string[];
+  connected?: boolean;
 }> {
-  if (isVercelKVAvailable()) {
+  const redis = getRedisClient();
+  if (redis) {
     try {
-      const { kv } = await import('@vercel/kv');
-      const keys = await kv.keys('*');
+      const keys = await redis.keys('*');
       return {
-        type: 'vercel-kv',
+        type: 'upstash-redis',
         size: keys.length,
-        keys: keys.slice(0, 50), // Limit for display
+        keys: keys.slice(0, 50) as string[], // Limit for display
+        connected: true,
       };
-    } catch {
-      return { type: 'vercel-kv' };
+    } catch (error) {
+      return { type: 'upstash-redis', connected: false };
     }
   } else {
     // Clean expired entries first
@@ -264,12 +290,12 @@ export async function getCacheStats(): Promise<{
  * Clear all cache
  */
 export async function clearAllCache(): Promise<void> {
-  if (isVercelKVAvailable()) {
+  const redis = getRedisClient();
+  if (redis) {
     try {
-      const { kv } = await import('@vercel/kv');
-      const keys = await kv.keys('*');
+      const keys = await redis.keys('*');
       if (keys.length > 0) {
-        await kv.del(...keys);
+        await redis.del(...keys);
       }
     } catch (error) {
       console.warn('[Cache] Clear all failed:', error);
