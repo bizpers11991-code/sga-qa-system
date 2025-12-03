@@ -825,6 +825,8 @@ export function createDataService<T extends { id?: string }>(listName: string) {
     async create(data: Omit<T, 'id'>): Promise<T> {
       const spData: any = {};
       for (const [key, value] of Object.entries(data as any)) {
+        // Skip 'id' field - SharePoint auto-generates Id
+        if (key === 'id') continue;
         const spKey = key.charAt(0).toUpperCase() + key.slice(1);
         spData[spKey] = typeof value === 'object' ? JSON.stringify(value) : value;
       }

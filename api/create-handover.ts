@@ -19,6 +19,14 @@ async function handler(
   const handoverData: Partial<TenderHandover> = request.body;
 
   try {
+    // Auto-generate clientId from clientName if not provided
+    if (!handoverData.clientId && handoverData.clientName) {
+      handoverData.clientId = handoverData.clientName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
     // Validate handover data
     validateHandover(handoverData);
 

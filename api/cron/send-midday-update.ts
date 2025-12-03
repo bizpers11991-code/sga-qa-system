@@ -7,10 +7,12 @@ import { sendManagementUpdate } from '../_lib/teams.js';
 import { getExpertSystemInstruction } from '../_lib/prompts.js';
 import { handleApiError } from '../_lib/errors.js';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+// Use GOOGLE_API_KEY or API_KEY (fallback)
+const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+if (!apiKey) {
+    console.warn("No AI API key configured - midday update will skip AI summaries");
 }
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const getTodayPerth = () => {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Perth' });
