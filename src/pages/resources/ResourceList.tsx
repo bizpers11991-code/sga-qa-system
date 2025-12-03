@@ -1,270 +1,27 @@
 import { PageContainer, PageHeader } from '../../components/layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { resourcesApi } from '../../services/resourcesApi';
 import { CrewResource, EquipmentResource } from '../../types';
 
-interface SpecDocument {
+// Types for dynamic documents API
+interface DocumentItem {
   id: string;
   name: string;
-  category: 'Specifications' | 'Test Methods';
-  description: string;
-  filename: string;
+  type: 'file' | 'folder';
+  size?: number;
+  mimeType?: string;
+  webUrl: string;
+  downloadUrl?: string;
+  lastModified: string;
   path: string;
 }
 
-// Specification documents from docs folder
-const specificationDocuments: SpecDocument[] = [
-  // Specifications
-  {
-    id: 'spec-ipwea',
-    name: 'IPWEA/AfPA Asphalt Specification',
-    category: 'Specifications',
-    description: 'General asphalt specification standard for road construction',
-    filename: 'IPWEA_AfPA_Asphalt_Specification.pdf',
-    path: '/api/specs/IPWEA_AfPA_Asphalt_Specification.pdf'
-  },
-  {
-    id: 'spec-201',
-    name: 'Specification 201 - Quality Management',
-    category: 'Specifications',
-    description: 'Quality assurance and management processes',
-    filename: 'specification-201-quality-management.pdf',
-    path: '/api/specs/specification-201-quality-management.pdf'
-  },
-  {
-    id: 'spec-501',
-    name: 'Specification 501 - Pavements',
-    category: 'Specifications',
-    description: 'Pavement design and construction requirements',
-    filename: 'specification-501-pavements-doc.pdf',
-    path: '/api/specs/specification-501-pavements-doc.pdf'
-  },
-  {
-    id: 'spec-502',
-    name: 'Specification 502 - Stone Mastic Asphalt',
-    category: 'Specifications',
-    description: 'SMA mix design and placement requirements',
-    filename: 'specification-502-stone-mastic-asphalt.pdf',
-    path: '/api/specs/specification-502-stone-mastic-asphalt.pdf'
-  },
-  {
-    id: 'spec-503',
-    name: 'Specification 503 - Bituminous Surfacing',
-    category: 'Specifications',
-    description: 'Bituminous surface course requirements',
-    filename: 'specification-503-bituminous-surfacing.pdf',
-    path: '/api/specs/specification-503-bituminous-surfacing.pdf'
-  },
-  {
-    id: 'spec-504',
-    name: 'Specification 504 - Asphalt Wearing Course',
-    category: 'Specifications',
-    description: 'Wearing course asphalt requirements',
-    filename: 'specification-504-asphalt-wearing-course.pdf',
-    path: '/api/specs/specification-504-asphalt-wearing-course.pdf'
-  },
-  {
-    id: 'spec-505',
-    name: 'Specification 505 - Segmental Paving',
-    category: 'Specifications',
-    description: 'Segmental paving blocks requirements',
-    filename: 'specification-505-segmental-paving.pdf',
-    path: '/api/specs/specification-505-segmental-paving.pdf'
-  },
-  {
-    id: 'spec-506',
-    name: 'Specification 506 - Enrichment Seals',
-    category: 'Specifications',
-    description: 'Enrichment seal coat requirements',
-    filename: 'specification-506-enrichment-seals.pdf',
-    path: '/api/specs/specification-506-enrichment-seals.pdf'
-  },
-  {
-    id: 'spec-507',
-    name: 'Specification 507 - Microsurfacing',
-    category: 'Specifications',
-    description: 'Microsurfacing treatment requirements',
-    filename: 'specification-507-microsurfacing.pdf',
-    path: '/api/specs/specification-507-microsurfacing.pdf'
-  },
-  {
-    id: 'spec-508',
-    name: 'Specification 508 - Cold Planing',
-    category: 'Specifications',
-    description: 'Cold planing/profiling removal requirements',
-    filename: 'specification-508-cold-planing.pdf',
-    path: '/api/specs/specification-508-cold-planing.pdf'
-  },
-  {
-    id: 'spec-509',
-    name: 'Specification 509 - Polymer Modified Bituminous Surfacing',
-    category: 'Specifications',
-    description: 'PMA binder surfacing requirements',
-    filename: 'specification-509-polymer-modified-bituminous-surfacing.pdf',
-    path: '/api/specs/specification-509-polymer-modified-bituminous-surfacing.pdf'
-  },
-  {
-    id: 'spec-510',
-    name: 'Specification 510 - Asphalt Intermediate Course',
-    category: 'Specifications',
-    description: 'Intermediate asphalt layer requirements',
-    filename: 'specification-510-asphalt-intermediate-course.pdf',
-    path: '/api/specs/specification-510-asphalt-intermediate-course.pdf'
-  },
-  {
-    id: 'spec-511',
-    name: 'Specification 511 - Materials for Bituminous Treatments',
-    category: 'Specifications',
-    description: 'Material specifications for bituminous work',
-    filename: 'specification-511-materials-for-bituminous-treatments.pdf',
-    path: '/api/specs/specification-511-materials-for-bituminous-treatments.pdf'
-  },
-  {
-    id: 'spec-515',
-    name: 'Specification 515 - In-Situ Stabilisation',
-    category: 'Specifications',
-    description: 'In-situ stabilisation of pavement materials',
-    filename: 'specification-515-in-situ-stabilisation-of-pavement-materials.pdf',
-    path: '/api/specs/specification-515-in-situ-stabilisation-of-pavement-materials.pdf'
-  },
-  {
-    id: 'spec-516',
-    name: 'Specification 516 - Crumb Rubber Open Graded Asphalt',
-    category: 'Specifications',
-    description: 'Open-graded crumb rubber asphalt requirements',
-    filename: 'specification-516-crumb-rubber-open-graded-asphalt-pdf.pdf',
-    path: '/api/specs/specification-516-crumb-rubber-open-graded-asphalt-pdf.pdf'
-  },
-  {
-    id: 'spec-517',
-    name: 'Specification 517 - Crumb Rubber Gap Graded Asphalt',
-    category: 'Specifications',
-    description: 'Gap-graded crumb rubber asphalt requirements',
-    filename: 'specification-517-crumb-rubber-gap-graded-asphalt-pdf.pdf',
-    path: '/api/specs/specification-517-crumb-rubber-gap-graded-asphalt-pdf.pdf'
-  },
-  // Test Methods
-  {
-    id: 'tm-straightedge',
-    name: 'ATM-453-22 - Surface Deviation Using Straightedge',
-    category: 'Test Methods',
-    description: 'Standard test method for straight edge testing',
-    filename: 'ATM-453-22_Surface_Deviation_Using_Straightedge_v1.1.pdf',
-    path: '/api/specs/ATM-453-22_Surface_Deviation_Using_Straightedge_v1.1.pdf'
-  },
-  {
-    id: 'tm-adhesion',
-    name: 'Assessment of Liquid Adhesion Agents',
-    category: 'Test Methods',
-    description: 'Testing adhesion agents for bituminous materials',
-    filename: 'assessment-of-liquid-adhesion-agents.pdf',
-    path: '/api/specs/assessment-of-liquid-adhesion-agents.pdf'
-  },
-  {
-    id: 'tm-bulk-density',
-    name: 'Bulk Density and Void Content of Asphalt',
-    category: 'Test Methods',
-    description: 'Core density testing procedure',
-    filename: 'bulk-density-and-void-content-of-asphalt.pdf',
-    path: '/api/specs/bulk-density-and-void-content-of-asphalt.pdf'
-  },
-  {
-    id: 'tm-bulk-density-vacuum',
-    name: 'Bulk Density - Vacuum Sealing Method',
-    category: 'Test Methods',
-    description: 'Vacuum sealing method for density testing',
-    filename: 'bulk-density-and-void-content-of-asphalt-vacuum-sealing-method.pdf',
-    path: '/api/specs/bulk-density-and-void-content-of-asphalt-vacuum-sealing-method.pdf'
-  },
-  {
-    id: 'tm-bitumen-density',
-    name: 'Density of Bituminous Materials and Oils',
-    category: 'Test Methods',
-    description: 'Binder density testing procedure',
-    filename: 'density-of-bituminous-materials-and-oils.pdf',
-    path: '/api/specs/density-of-bituminous-materials-and-oils.pdf'
-  },
-  {
-    id: 'tm-dsr',
-    name: 'Bitumen Durability Using DSR',
-    category: 'Test Methods',
-    description: 'Dynamic Shear Rheometer testing procedure',
-    filename: 'determination-of-bitumen-durability-using-a-dynamic-shear-rheometer-dsr.pdf',
-    path: '/api/specs/determination-of-bitumen-durability-using-a-dynamic-shear-rheometer-dsr.pdf'
-  },
-  {
-    id: 'tm-dispersion',
-    name: 'Dispersion of Bitumen in Soil',
-    category: 'Test Methods',
-    description: 'Soil-bitumen adhesion testing',
-    filename: 'dispersion-of-bitumen-in-soil.pdf',
-    path: '/api/specs/dispersion-of-bitumen-in-soil.pdf'
-  },
-  {
-    id: 'tm-rice',
-    name: 'Maximum Density of Asphalt - Rice Method',
-    category: 'Test Methods',
-    description: 'Rice pycnometer method for maximum density',
-    filename: 'maximum-density-of-asphalt-rice-method.pdf',
-    path: '/api/specs/maximum-density-of-asphalt-rice-method.pdf'
-  },
-  {
-    id: 'tm-preparation',
-    name: 'Preparation of Asphalt for Testing',
-    category: 'Test Methods',
-    description: 'Sample preparation procedures',
-    filename: 'preparation-of-asphalt-for-testing.pdf',
-    path: '/api/specs/preparation-of-asphalt-for-testing.pdf'
-  },
-  {
-    id: 'tm-sampling-asphalt',
-    name: 'Sampling and Storage of Asphalt',
-    category: 'Test Methods',
-    description: 'Asphalt sampling procedures',
-    filename: 'sampling-and-storage-of-asphalt.pdf',
-    path: '/api/specs/sampling-and-storage-of-asphalt.pdf'
-  },
-  {
-    id: 'tm-sampling-bitumen',
-    name: 'Sampling Procedures for Bitumen and Oils',
-    category: 'Test Methods',
-    description: 'Binder sampling procedures',
-    filename: 'sampling-procedures-for-bitumen-and-oils.pdf',
-    path: '/api/specs/sampling-procedures-for-bitumen-and-oils.pdf'
-  },
-  {
-    id: 'tm-marshall',
-    name: 'Stability and Flow - Marshall Method',
-    category: 'Test Methods',
-    description: 'Marshall test procedure for asphalt',
-    filename: 'stability-and-flow-of-asphalt-marshall-method.pdf',
-    path: '/api/specs/stability-and-flow-of-asphalt-marshall-method.pdf'
-  },
-  {
-    id: 'tm-emulsion',
-    name: 'Stone Coating and Water Resistance Test',
-    category: 'Test Methods',
-    description: 'Cationic bituminous emulsion testing',
-    filename: 'stone-coating-and-water-resistance-test-cationic-bituminous-emulsions.pdf',
-    path: '/api/specs/stone-coating-and-water-resistance-test-cationic-bituminous-emulsions.pdf'
-  },
-  {
-    id: 'tm-centrifuge',
-    name: 'WA 730.1 - Bitumen Content (Centrifuge)',
-    category: 'Test Methods',
-    description: 'Centrifuge method for bitumen content',
-    filename: 'wa-730.1-bitumen-content-and-particle-size-distribution-of-asphalt-and-stabilised-soil-centrifuge.pdf',
-    path: '/api/specs/wa-730.1-bitumen-content-and-particle-size-distribution-of-asphalt-and-stabilised-soil-centrifuge.pdf'
-  },
-  {
-    id: 'tm-ignition',
-    name: 'WA 730.2 - Bitumen Content (Ignition Oven)',
-    category: 'Test Methods',
-    description: 'Ignition oven method for bitumen content',
-    filename: 'wa-730.2-bitumen-content-and-particle-size-distribution-of-asphalt-ignition-oven-method.pdf',
-    path: '/api/specs/wa-730.2-bitumen-content-and-particle-size-distribution-of-asphalt-ignition-oven-method.pdf'
-  },
-];
+interface DocumentsResponse {
+  library: string;
+  folder: string | null;
+  items: DocumentItem[];
+  breadcrumb: { name: string; path: string }[];
+}
 
 type TabType = 'specifications' | 'test-methods' | 'crew' | 'equipment';
 
@@ -272,43 +29,69 @@ interface TabConfig {
   id: TabType;
   label: string;
   icon: string;
-  count?: number;
+  library?: string; // SharePoint library name
 }
 
 const ResourceList = () => {
   const [activeTab, setActiveTab] = useState<TabType>('specifications');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Crew & Equipment state
   const [crew, setCrew] = useState<CrewResource[]>([]);
   const [equipment, setEquipment] = useState<EquipmentResource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addType, setAddType] = useState<'crew' | 'equipment'>('crew');
+  const [resourcesLoading, setResourcesLoading] = useState(true);
+
+  // Documents state
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [breadcrumb, setBreadcrumb] = useState<{ name: string; path: string }[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  const [docsLoading, setDocsLoading] = useState(false);
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<'crew' | 'equipment'>('crew');
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state for adding new crew/equipment
-  const [newCrew, setNewCrew] = useState<Partial<CrewResource>>({
-    name: '',
-    division: 'Asphalt',
-    role: '',
-    phone: '',
-    email: '',
-    isForeman: false,
-  });
-  const [newEquipment, setNewEquipment] = useState<Partial<EquipmentResource>>({
-    name: '',
-    division: 'Asphalt',
-    type: '',
-    registrationNumber: '',
-    status: 'Available',
-  });
+  // Form state
+  const [formData, setFormData] = useState<any>({});
 
-  useEffect(() => {
-    loadResources();
+  const tabs: TabConfig[] = [
+    { id: 'specifications', label: 'Specifications', icon: '📋', library: 'Specifications' },
+    { id: 'test-methods', label: 'Test Methods', icon: '🧪', library: 'TestMethods' },
+    { id: 'crew', label: 'Crew', icon: '👷' },
+    { id: 'equipment', label: 'Equipment', icon: '🚜' },
+  ];
+
+  // Load documents from SharePoint
+  const loadDocuments = useCallback(async (library: string, folder: string | null = null) => {
+    setDocsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ library });
+      if (folder) params.append('folder', folder);
+
+      const response = await fetch(`/api/resources/documents?${params}`);
+      if (!response.ok) throw new Error('Failed to load documents');
+
+      const data: DocumentsResponse = await response.json();
+      setDocuments(data.items);
+      setBreadcrumb(data.breadcrumb);
+      setCurrentFolder(folder);
+    } catch (err) {
+      console.error('Error loading documents:', err);
+      setError('Failed to load documents. Please try again.');
+      setDocuments([]);
+    } finally {
+      setDocsLoading(false);
+    }
   }, []);
 
+  // Load crew and equipment
   const loadResources = async () => {
-    setLoading(true);
+    setResourcesLoading(true);
     setError(null);
     try {
       const data = await resourcesApi.getResources();
@@ -318,102 +101,131 @@ const ResourceList = () => {
       console.error('Error loading resources:', err);
       setError('Failed to load resources. Please try again.');
     } finally {
-      setLoading(false);
+      setResourcesLoading(false);
     }
   };
 
-  // Filter documents by category
-  const specifications = specificationDocuments.filter(d => d.category === 'Specifications');
-  const testMethods = specificationDocuments.filter(d => d.category === 'Test Methods');
+  // Initial load
+  useEffect(() => {
+    loadResources();
+  }, []);
 
-  const tabs: TabConfig[] = [
-    { id: 'specifications', label: 'Specifications', icon: '📋', count: specifications.length },
-    { id: 'test-methods', label: 'Test Methods', icon: '🧪', count: testMethods.length },
-    { id: 'crew', label: 'Crew', icon: '👷', count: crew.length },
-    { id: 'equipment', label: 'Equipment', icon: '🚜', count: equipment.length },
-  ];
+  // Load documents when tab changes
+  useEffect(() => {
+    const tab = tabs.find(t => t.id === activeTab);
+    if (tab?.library) {
+      loadDocuments(tab.library, null);
+    }
+  }, [activeTab, loadDocuments]);
 
-  const getDivisionColor = (division: string) => {
-    switch (division) {
-      case 'Asphalt':
-        return 'bg-blue-100 text-blue-800';
-      case 'Profiling':
-        return 'bg-purple-100 text-purple-800';
-      case 'Spray':
-        return 'bg-green-100 text-green-800';
-      case 'Common':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  // Navigate to folder
+  const navigateToFolder = (path: string | null) => {
+    const tab = tabs.find(t => t.id === activeTab);
+    if (tab?.library) {
+      loadDocuments(tab.library, path);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Available':
-        return 'bg-green-100 text-green-800';
-      case 'In Use':
-        return 'bg-blue-100 text-blue-800';
-      case 'Maintenance':
-        return 'bg-amber-100 text-amber-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  // Open document or navigate to folder
+  const handleItemClick = (item: DocumentItem) => {
+    if (item.type === 'folder') {
+      navigateToFolder(item.path);
+    } else {
+      window.open(item.webUrl, '_blank');
     }
   };
 
-  const handleViewPdf = (doc: SpecDocument) => {
-    window.open(doc.path, '_blank');
+  // Download file
+  const handleDownload = (item: DocumentItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (item.downloadUrl) {
+      window.open(item.downloadUrl, '_blank');
+    } else {
+      window.open(item.webUrl, '_blank');
+    }
   };
 
-  const handleDownloadPdf = (doc: SpecDocument) => {
-    const link = document.createElement('a');
-    link.href = doc.path;
-    link.download = doc.filename;
-    link.click();
+  // Format file size
+  const formatSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleAddResource = async () => {
+  // Modal handlers
+  const openAddModal = (type: 'crew' | 'equipment') => {
+    setModalType(type);
+    setModalMode('add');
+    setEditingItem(null);
+    setFormData(type === 'crew'
+      ? { name: '', division: 'Asphalt', role: '', phone: '', email: '', isForeman: false }
+      : { name: '', division: 'Asphalt', type: '', registrationNumber: '', status: 'Available', fleetId: '' }
+    );
+    setShowModal(true);
+    setError(null);
+  };
+
+  const openEditModal = (type: 'crew' | 'equipment', item: any) => {
+    setModalType(type);
+    setModalMode('edit');
+    setEditingItem(item);
+    setFormData({ ...item });
+    setShowModal(true);
+    setError(null);
+  };
+
+  const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
-      const resourceData = addType === 'crew'
-        ? { ...newCrew, id: `crew-${Date.now()}` }
-        : { ...newEquipment, id: `equip-${Date.now()}` };
+      const endpoint = modalType === 'crew' ? '/api/crew' : '/api/equipment';
+      const method = modalMode === 'add' ? 'POST' : 'PUT';
+      const url = modalMode === 'edit' ? `${endpoint}?id=${editingItem.id}` : endpoint;
 
-      // ResourceType expects capitalized 'Crew' | 'Equipment'
-      const resourceType = addType === 'crew' ? 'Crew' : 'Equipment';
-
-      const response = await fetch('/api/save-resource', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: resourceType, resource: resourceData }),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save resource');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to save');
       }
 
-      setShowAddModal(false);
-      // Reset forms
-      setNewCrew({ name: '', division: 'Asphalt', role: '', phone: '', email: '', isForeman: false });
-      setNewEquipment({ name: '', division: 'Asphalt', type: '', registrationNumber: '', status: 'Available' });
-      // Reload resources
+      setShowModal(false);
       await loadResources();
-    } catch (err) {
-      console.error('Error saving resource:', err);
-      setError('Failed to save resource. Please try again.');
+    } catch (err: any) {
+      console.error('Error saving:', err);
+      setError(err.message || 'Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const openAddModal = (type: 'crew' | 'equipment') => {
-    setAddType(type);
-    setShowAddModal(true);
-    setError(null);
+  const handleDelete = async (type: 'crew' | 'equipment', id: string) => {
+    if (!confirm(`Are you sure you want to ${type === 'crew' ? 'deactivate this crew member' : 'delete this equipment'}?`)) {
+      return;
+    }
+
+    try {
+      const endpoint = type === 'crew' ? '/api/crew' : '/api/equipment';
+      const response = await fetch(`${endpoint}?id=${id}`, { method: 'DELETE' });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete');
+      }
+
+      await loadResources();
+    } catch (err: any) {
+      console.error('Error deleting:', err);
+      setError(err.message || 'Failed to delete. Please try again.');
+    }
   };
 
-  // Filter by search term
+  // Filter items by search
   const filterBySearch = <T extends { name: string }>(items: T[]): T[] => {
     if (!searchTerm) return items;
     return items.filter(item =>
@@ -421,31 +233,49 @@ const ResourceList = () => {
     );
   };
 
-  const filteredSpecs = filterBySearch(specifications);
-  const filteredTestMethods = filterBySearch(testMethods);
+  const filteredDocuments = filterBySearch(documents);
   const filteredCrew = filterBySearch(crew);
   const filteredEquipment = filterBySearch(equipment);
+
+  const getDivisionColor = (division: string) => {
+    const colors: Record<string, string> = {
+      'Asphalt': 'bg-blue-100 text-blue-800',
+      'Profiling': 'bg-purple-100 text-purple-800',
+      'Spray': 'bg-green-100 text-green-800',
+      'Common': 'bg-gray-100 text-gray-800',
+    };
+    return colors[division] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'Available': 'bg-green-100 text-green-800',
+      'In Use': 'bg-blue-100 text-blue-800',
+      'Maintenance': 'bg-amber-100 text-amber-800',
+      'Retired': 'bg-red-100 text-red-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const isDocumentTab = activeTab === 'specifications' || activeTab === 'test-methods';
 
   return (
     <PageContainer>
       <PageHeader
         title="Resources"
         description="Access specifications, test methods, and manage crew & equipment"
-        breadcrumbs={[
-          { label: 'Home', path: '/' },
-          { label: 'Resources' }
-        ]}
+        breadcrumbs={[{ label: 'Home', path: '/' }, { label: 'Resources' }]}
       />
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Vertical Tabs (Left Sidebar) */}
+        {/* Sidebar Tabs */}
         <div className="lg:w-64 flex-shrink-0">
           <div className="bg-white rounded-lg shadow p-2 lg:sticky lg:top-4">
             <nav className="flex lg:flex-col gap-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { setActiveTab(tab.id); setSearchTerm(''); setCurrentFolder(null); }}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all w-full ${
                     activeTab === tab.id
                       ? 'bg-sga-700 text-white shadow-md'
@@ -455,20 +285,33 @@ const ResourceList = () => {
                   <span className="text-xl">{tab.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{tab.label}</div>
-                    <div className={`text-xs ${activeTab === tab.id ? 'text-sga-200' : 'text-gray-500'}`}>
-                      {tab.count} items
-                    </div>
                   </div>
                 </button>
               ))}
             </nav>
+
+            {/* SharePoint Link */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <a
+                href="https://sgagroupcomau.sharepoint.com/sites/SGAQualityAssurance"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-sga-700"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                </svg>
+                Open in SharePoint
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
           {/* Search Bar */}
-          <div className="mb-6">
+          <div className="mb-4">
             <input
               type="text"
               placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()}...`}
@@ -478,117 +321,85 @@ const ResourceList = () => {
             />
           </div>
 
+          {/* Breadcrumb for documents */}
+          {isDocumentTab && breadcrumb.length > 1 && (
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              {breadcrumb.map((item, index) => (
+                <span key={item.path} className="flex items-center gap-2">
+                  {index > 0 && <span className="text-gray-400">/</span>}
+                  <button
+                    onClick={() => navigateToFolder(item.path || null)}
+                    className={`hover:text-sga-700 ${index === breadcrumb.length - 1 ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                  >
+                    {item.name}
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
               {error}
+              <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
             </div>
           )}
 
-          {/* Specifications Tab */}
-          {activeTab === 'specifications' && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredSpecs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border border-gray-100"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <span className="text-2xl">📋</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                        {doc.name}
-                      </h3>
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        Specification
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {doc.description}
+          {/* Document Tabs (Specifications & Test Methods) */}
+          {isDocumentTab && (
+            <div>
+              {docsLoading ? (
+                <div className="bg-white rounded-lg shadow p-12 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sga-700 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading documents...</p>
+                </div>
+              ) : filteredDocuments.length === 0 ? (
+                <div className="bg-white rounded-lg shadow p-12 text-center">
+                  <span className="text-4xl mb-4 block">{activeTab === 'specifications' ? '📋' : '🧪'}</span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Found</h3>
+                  <p className="text-gray-600">
+                    {currentFolder ? 'This folder is empty.' : 'No documents in this library.'}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleViewPdf(doc)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDownloadPdf(doc)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 transition-colors text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download
-                    </button>
-                  </div>
                 </div>
-              ))}
-              {filteredSpecs.length === 0 && (
-                <div className="col-span-2 bg-white rounded-lg shadow p-12 text-center">
-                  <span className="text-4xl mb-4 block">🔍</span>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Specifications Found</h3>
-                  <p className="text-gray-600">Try adjusting your search criteria.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Test Methods Tab */}
-          {activeTab === 'test-methods' && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredTestMethods.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border border-gray-100"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <span className="text-2xl">🧪</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                        {doc.name}
-                      </h3>
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        Test Method
-                      </span>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredDocuments.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                      className="bg-white rounded-lg shadow hover:shadow-lg transition-all p-4 border border-gray-100 cursor-pointer group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">
+                          {item.type === 'folder' ? '📁' : '📄'}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 text-sm truncate group-hover:text-sga-700">
+                            {item.name}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {item.type === 'folder' ? 'Folder' : formatSize(item.size)}
+                          </p>
+                        </div>
+                      </div>
+                      {item.type === 'file' && (
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); window.open(item.webUrl, '_blank'); }}
+                            className="flex-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 font-medium"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={(e) => handleDownload(item, e)}
+                            className="flex-1 px-3 py-1.5 text-xs bg-sga-700 text-white rounded hover:bg-sga-600 font-medium"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {doc.description}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleViewPdf(doc)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDownloadPdf(doc)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 transition-colors text-sm font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {filteredTestMethods.length === 0 && (
-                <div className="col-span-2 bg-white rounded-lg shadow p-12 text-center">
-                  <span className="text-4xl mb-4 block">🔍</span>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Test Methods Found</h3>
-                  <p className="text-gray-600">Try adjusting your search criteria.</p>
+                  ))}
                 </div>
               )}
             </div>
@@ -609,7 +420,7 @@ const ResourceList = () => {
                 </button>
               </div>
 
-              {loading ? (
+              {resourcesLoading ? (
                 <div className="bg-white rounded-lg shadow p-12 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sga-700 mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading crew...</p>
@@ -619,12 +430,6 @@ const ResourceList = () => {
                   <span className="text-4xl mb-4 block">👷</span>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Crew Members</h3>
                   <p className="text-gray-600 mb-6">Add crew members to your system.</p>
-                  <button
-                    onClick={() => openAddModal('crew')}
-                    className="px-6 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 transition-colors font-medium"
-                  >
-                    Add Crew Member
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -652,6 +457,24 @@ const ResourceList = () => {
                               Foreman
                             </span>
                           )}
+                          <button
+                            onClick={() => openEditModal('crew', member)}
+                            className="p-2 text-gray-400 hover:text-sga-700 hover:bg-gray-100 rounded"
+                            title="Edit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete('crew', member.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="Deactivate"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                       {(member.phone || member.email) && (
@@ -682,7 +505,7 @@ const ResourceList = () => {
                 </button>
               </div>
 
-              {loading ? (
+              {resourcesLoading ? (
                 <div className="bg-white rounded-lg shadow p-12 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sga-700 mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading equipment...</p>
@@ -692,12 +515,6 @@ const ResourceList = () => {
                   <span className="text-4xl mb-4 block">🚜</span>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Equipment</h3>
                   <p className="text-gray-600 mb-6">Add equipment to your system.</p>
-                  <button
-                    onClick={() => openAddModal('equipment')}
-                    className="px-6 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 transition-colors font-medium"
-                  >
-                    Add Equipment
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -713,7 +530,7 @@ const ResourceList = () => {
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                            <p className="text-sm text-gray-600">{item.type || 'Equipment'}</p>
+                            <p className="text-sm text-gray-600">{item.type || 'Equipment'} • {item.id}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
@@ -723,6 +540,24 @@ const ResourceList = () => {
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
                             {item.status}
                           </span>
+                          <button
+                            onClick={() => openEditModal('equipment', item)}
+                            className="p-2 text-gray-400 hover:text-sga-700 hover:bg-gray-100 rounded"
+                            title="Edit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete('equipment', item.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="Delete"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                       {item.registrationNumber && (
@@ -739,19 +574,16 @@ const ResourceList = () => {
         </div>
       </div>
 
-      {/* Add Resource Modal */}
-      {showAddModal && (
+      {/* Add/Edit Modal */}
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Add {addType === 'crew' ? 'Crew Member' : 'Equipment'}
+                  {modalMode === 'add' ? 'Add' : 'Edit'} {modalType === 'crew' ? 'Crew Member' : 'Equipment'}
                 </h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -764,24 +596,24 @@ const ResourceList = () => {
                 </div>
               )}
 
-              {addType === 'crew' ? (
+              {modalType === 'crew' ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
                       type="text"
-                      value={newCrew.name}
-                      onChange={(e) => setNewCrew({ ...newCrew, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                       placeholder="John Smith"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Division *</label>
                     <select
-                      value={newCrew.division}
-                      onChange={(e) => setNewCrew({ ...newCrew, division: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.division || 'Asphalt'}
+                      onChange={(e) => setFormData({ ...formData, division: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                     >
                       <option value="Asphalt">Asphalt</option>
                       <option value="Profiling">Profiling</option>
@@ -793,9 +625,9 @@ const ResourceList = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                     <input
                       type="text"
-                      value={newCrew.role}
-                      onChange={(e) => setNewCrew({ ...newCrew, role: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.role || ''}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                       placeholder="Roller Operator"
                     />
                   </div>
@@ -803,9 +635,9 @@ const ResourceList = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                     <input
                       type="tel"
-                      value={newCrew.phone}
-                      onChange={(e) => setNewCrew({ ...newCrew, phone: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.phone || ''}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                       placeholder="0400 000 000"
                     />
                   </div>
@@ -813,9 +645,9 @@ const ResourceList = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input
                       type="email"
-                      value={newCrew.email}
-                      onChange={(e) => setNewCrew({ ...newCrew, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.email || ''}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                       placeholder="john@sga.com.au"
                     />
                   </div>
@@ -823,8 +655,8 @@ const ResourceList = () => {
                     <input
                       type="checkbox"
                       id="isForeman"
-                      checked={newCrew.isForeman}
-                      onChange={(e) => setNewCrew({ ...newCrew, isForeman: e.target.checked })}
+                      checked={formData.isForeman || false}
+                      onChange={(e) => setFormData({ ...formData, isForeman: e.target.checked })}
                       className="w-4 h-4 text-sga-700 border-gray-300 rounded focus:ring-sga-500"
                     />
                     <label htmlFor="isForeman" className="text-sm text-gray-700">Is Foreman/Crew Leader</label>
@@ -833,21 +665,41 @@ const ResourceList = () => {
               ) : (
                 <div className="space-y-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fleet ID</label>
+                    <input
+                      type="text"
+                      value={formData.fleetId || ''}
+                      onChange={(e) => setFormData({ ...formData, fleetId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
+                      placeholder="SGA100"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
                       type="text"
-                      value={newEquipment.name}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
-                      placeholder="2m Profiler #1"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
+                      placeholder="2m Profiler"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                    <input
+                      type="text"
+                      value={formData.type || ''}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
+                      placeholder="Profiler, Roller, Paver"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Division *</label>
                     <select
-                      value={newEquipment.division}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, division: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.division || 'Asphalt'}
+                      onChange={(e) => setFormData({ ...formData, division: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                     >
                       <option value="Asphalt">Asphalt</option>
                       <option value="Profiling">Profiling</option>
@@ -856,35 +708,26 @@ const ResourceList = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Registration</label>
                     <input
                       type="text"
-                      value={newEquipment.type}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
-                      placeholder="Profiler, Roller, Paver, etc."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Registration Number</label>
-                    <input
-                      type="text"
-                      value={newEquipment.registrationNumber}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, registrationNumber: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.registrationNumber || ''}
+                      onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                       placeholder="ABC-123"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
-                      value={newEquipment.status}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, status: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500 focus:border-sga-500"
+                      value={formData.status || 'Available'}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sga-500"
                     >
                       <option value="Available">Available</option>
                       <option value="In Use">In Use</option>
                       <option value="Maintenance">Maintenance</option>
+                      <option value="Retired">Retired</option>
                     </select>
                   </div>
                 </div>
@@ -892,15 +735,15 @@ const ResourceList = () => {
 
               <div className="mt-6 flex gap-3">
                 <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleAddResource}
-                  disabled={saving || (addType === 'crew' ? !newCrew.name : !newEquipment.name)}
-                  className="flex-1 px-4 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleSave}
+                  disabled={saving || !formData.name}
+                  className="flex-1 px-4 py-2 bg-sga-700 text-white rounded-lg hover:bg-sga-600 font-medium disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
