@@ -1,7 +1,7 @@
 # SGA QA System - Master Instructions
 
 **Last Updated:** December 3, 2025
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Status:** Production Ready
 
 ---
@@ -28,7 +28,7 @@ A **Quality Assurance management system** for Safety Grooving Australia (SGA), a
 | Frontend | React 18 + TypeScript + Vite + Tailwind | PWA UI |
 | Backend | Vercel Serverless Functions | API endpoints |
 | **Data Storage** | **SharePoint Lists** | All CRUD operations |
-| **File Storage** | **SharePoint Document Libraries** | PDFs, photos |
+| **File Storage** | **SharePoint Document Libraries** | PDFs, photos, specs |
 | **Caching** | **Upstash Redis** | Rate limiting, token cache |
 | Authentication | Microsoft MSAL (Azure AD) | User auth |
 | AI Features | Azure OpenAI (primary) / Gemini (fallback) | Summaries, chat |
@@ -48,6 +48,7 @@ sga-qa-system/
 ├── api/                    # Vercel serverless API routes (MAIN)
 │   ├── _lib/              # Shared backend libraries
 │   │   ├── sharepointData.ts  # Main data layer (1000+ lines)
+│   │   ├── sharepointFiles.ts # File upload/download
 │   │   ├── aiService.ts       # Unified AI service
 │   │   ├── azureOpenAI.ts     # Azure OpenAI implementation
 │   │   ├── cache.ts           # Redis caching
@@ -55,17 +56,44 @@ sga-qa-system/
 │   │   └── teams.ts           # Teams notifications
 │   ├── chat/              # AI Chat endpoints
 │   ├── cron/              # Scheduled cron jobs
-│   └── *.ts               # 95+ API endpoints
+│   ├── crew/              # Crew CRUD API
+│   ├── equipment/         # Equipment CRUD API
+│   ├── resources/         # Dynamic document browsing API
+│   └── *.ts               # 100+ API endpoints
 ├── src/
 │   ├── components/        # React components
 │   ├── pages/             # Page components
 │   ├── services/          # Frontend API clients
 │   ├── lib/sharepoint/    # SharePoint client library
 │   └── types.ts           # Main TypeScript types
-├── docs/                  # Documentation
+├── scripts/               # SharePoint setup scripts
+├── docs/                  # Specifications & Test Methods
 ├── tests/                 # Test files
 └── archive/               # Old code reference
 ```
+
+---
+
+## Recent Updates (December 3, 2025)
+
+### Bug Fixes Applied
+- Fixed SharePoint create operation (skip `id` field - auto-generated)
+- Fixed handover `clientId` missing error (auto-generate from clientName)
+- Fixed cron job API key configuration (use GOOGLE_API_KEY)
+
+### New Features Added
+1. **Dynamic Resources API** - Documents now load from SharePoint with folder navigation
+2. **Crew Management CRUD** - Add/edit/delete crew members from app (syncs with SharePoint)
+3. **Equipment Management CRUD** - Add/edit/delete equipment from app
+4. **SharePoint Folder Structure** - Organized specs into folders (Main Roads WA, Australian Standards, etc.)
+
+### SharePoint Document Libraries
+| Library | Contents |
+|---------|----------|
+| Specifications | Main Roads WA specs (15), IPWEA (1), Australian Standards (1) |
+| TestMethods | Asphalt Tests (8), Bitumen Tests (5), Density (1), Sampling (1), Surface (1) |
+| QADocuments | QA documents and templates |
+| SGAQAFiles | Uploaded site photos and reports |
 
 ---
 
@@ -75,9 +103,9 @@ Copy `.env.example` to `.env.local`. Required:
 
 ```env
 # Azure AD (Required)
-TENANT_ID=your-tenant-id
-CLIENT_ID=your-client-id
-CLIENT_SECRET=your-client-secret
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_ID=your-client-id
+AZURE_CLIENT_SECRET=your-client-secret
 
 # SharePoint (Required)
 SHAREPOINT_SITE_URL=https://sgagroupcomau.sharepoint.com/sites/SGAQualityAssurance
@@ -91,7 +119,7 @@ VITE_MSAL_REDIRECT_URI=https://your-app.vercel.app
 UPSTASH_REDIS_REST_URL=your-upstash-url
 UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 
-# AI Features - Azure OpenAI (THE LAST STEP)
+# AI Features - Azure OpenAI
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT=gpt-4
@@ -119,8 +147,39 @@ TEAMS_WEBHOOK_URL_SUMMARY=https://...
 | AI Chat System | Complete (needs Azure OpenAI credentials) |
 | Cron Jobs | Complete |
 | Rate Limiting | Complete |
+| **Dynamic Resources (SharePoint)** | **Complete** |
+| **Crew/Equipment Management** | **Complete** |
 
-**Last Step:** Add Azure OpenAI credentials to Vercel to enable AI chat.
+**Remaining:**
+1. Add Azure OpenAI credentials to Vercel
+2. Configure SharePoint homepage/navigation (manual - see below)
+
+---
+
+## SharePoint Configuration (Manual)
+
+### Navigation Setup
+1. Go to: https://sgagroupcomau.sharepoint.com/sites/SGAQualityAssurance
+2. Click "Edit" at bottom of left navigation
+3. Add parent items (Documents, Lists, System) with sub-links
+4. Save
+
+### Homepage Setup
+1. Click "Edit" on homepage
+2. Add web parts: Hero, Quick Links, Document Library, Site Activity
+3. Configure theme: Settings → Change the look → Orange
+4. Set logo: Settings → Header → sga-logo.png (already uploaded)
+
+---
+
+## API Endpoints (New)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/resources/documents` | GET | Browse SharePoint documents with folders |
+| `/api/resources/libraries` | GET | List available document libraries |
+| `/api/crew` | GET/POST/PUT/DELETE | Crew member CRUD |
+| `/api/equipment` | GET/POST/PUT/DELETE | Equipment CRUD |
 
 ---
 
@@ -146,7 +205,7 @@ npm run preview      # Preview production build
 | Incidents | Incident reports |
 | NCRs | Non-conformance reports |
 | Foremen | Foreman/crew data |
-| Resources | Equipment/materials |
+| Resources | Crew & Equipment |
 | ScopeReports | Site scope reports |
 | DivisionRequests | Cross-division requests |
 | ITPTemplates | ITP checklist templates |
@@ -178,7 +237,7 @@ After deployment, verify at `/api/health`:
 ## Troubleshooting
 
 ### "SharePoint not configured"
-Check `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET`, and `SHAREPOINT_SITE_URL`.
+Check `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `SHAREPOINT_SITE_URL`.
 
 ### "No AI provider configured"
 Add Azure OpenAI credentials or set `GOOGLE_API_KEY` for Gemini fallback.
