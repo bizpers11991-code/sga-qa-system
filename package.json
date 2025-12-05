@@ -62,7 +62,8 @@
     "@vitest/ui": "^1.6.0",
     "jsdom": "^27.2.0",
     "msw": "^2.12.1",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "xlsx": "^0.18.5"
   },
   "overrides": {
     "@vercel/node": "^3.2.0",

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { SgaDailyReportData, Job, CrewResource, EquipmentResource } from '../../types';
 import SignaturePad from '../common/SignaturePad';
 import SgaLogo from '../common/SgaLogo';
 import VoiceInput from '../common/VoiceInput';
 import { useWeatherForForm } from '@/context/WeatherContext';
+import { MultiSelect, MultiSelectOption } from '../ui/MultiSelect';
 
 interface DailyReportFormProps {
   initialData: SgaDailyReportData;
@@ -109,6 +110,96 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
   // Filter resources based on the job's division
   const crewList = crewResources.filter((c) => c.division === job.division || c.division === 'Common');
   const equipmentList = equipmentResources.filter((e) => e.division === job.division || e.division === 'Common');
+
+  // Convert to MultiSelect options
+  const equipmentOptions: MultiSelectOption[] = useMemo(() =>
+    equipmentList.map(eq => ({
+      id: eq.id,
+      label: `${eq.id} - ${eq.name}`,
+      sublabel: eq.registrationNumber || eq.type,
+      group: eq.type,
+    })), [equipmentList]);
+
+  const crewOptions: MultiSelectOption[] = useMemo(() =>
+    crewList.map(member => ({
+      id: member.id,
+      label: member.name,
+      sublabel: member.isForeman ? 'Foreman' : 'Crew',
+      group: member.division,
+    })), [crewList]);
+
+  // Get currently selected equipment IDs
+  const selectedEquipmentIds = useMemo(() =>
+    data.plantEquipment.map(p => p.plantId).filter(Boolean),
+    [data.plantEquipment]);
+
+  // Get currently selected crew IDs
+  const selectedCrewIds = useMemo(() =>
+    data.labour.map(l => l.fullName).filter(Boolean),
+    [data.labour]);
+
+  // Quick add multiple equipment
+  const handleQuickAddEquipment = (selectedIds: string[]) => {
+    const currentIds = data.plantEquipment.map(p => p.plantId).filter(Boolean);
+    const newIds = selectedIds.filter(id => !currentIds.includes(id));
+    const removedIds = currentIds.filter(id => !selectedIds.includes(id));
+
+    let newList = [...data.plantEquipment];
+
+    // Remove deselected equipment
+    if (removedIds.length > 0) {
+      newList = newList.filter(p => !removedIds.includes(p.plantId));
+    }
+
+    // Add new equipment
+    newIds.forEach(id => {
+      const eq = equipmentList.find(e => e.id === id);
+      if (eq) {
+        newList.push({
+          type: eq.name,
+          supplier: 'SGA',
+          plantId: eq.id,
+          prestart: '',
+          startTime: '',
+          endTime: '',
+          hours: '',
+          comments: '',
+        });
+      }
+    });
+
+    setData(prev => ({ ...prev, plantEquipment: newList }));
+  };
+
+  // Quick add multiple crew/labour
+  const handleQuickAddCrew = (selectedIds: string[]) => {
+    const currentNames = data.labour.map(l => l.fullName).filter(Boolean);
+    const newIds = selectedIds.filter(id => !currentNames.includes(id));
+    const removedIds = currentNames.filter(name => !selectedIds.includes(name));
+
+    let newList = [...data.labour];
+
+    // Remove deselected crew
+    if (removedIds.length > 0) {
+      newList = newList.filter(l => !removedIds.includes(l.fullName));
+    }
+
+    // Add new crew members
+    newIds.forEach(id => {
+      const member = crewList.find(c => c.id === id);
+      if (member) {
+        newList.push({
+          fullName: member.name,
+          startTime: '',
+          endTime: '',
+          hours: '',
+          comments: '',
+        });
+      }
+    });
+
+    setData(prev => ({ ...prev, labour: newList }));
+  };
 
   useEffect(() => {
     onUpdate(data);
@@ -867,8 +958,27 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
       </div>
 
       {/* Plant/Equipment */}
-      <div className="space-y-2">
-        <h4 className="font-semibold">Plant / Equipment</h4>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold">Plant / Equipment</h4>
+        </div>
+
+        {/* Quick Multi-Select for Equipment */}
+        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+          <MultiSelect
+            label="Quick Add Equipment"
+            placeholder="Search and select multiple equipment..."
+            options={equipmentOptions}
+            selected={selectedEquipmentIds}
+            onChange={handleQuickAddEquipment}
+            searchable={true}
+            groupBy={true}
+            showSelectAll={true}
+            maxHeight={200}
+          />
+          <p className="text-xs text-blue-600 mt-1">Select multiple equipment to add them all at once</p>
+        </div>
+
         {data.plantEquipment.map((row, index) => (
           <div
             key={index}
@@ -1040,8 +1150,25 @@ export const DailyReportForm: React.FC<DailyReportFormProps> = ({
       )}
 
       {/* Crew */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <h4 className="font-semibold">Crew</h4>
+
+        {/* Quick Multi-Select for Crew */}
+        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+          <MultiSelect
+            label="Quick Add Crew Members"
+            placeholder="Search and select crew members..."
+            options={crewOptions}
+            selected={crewList.filter(c => data.labour.some(l => l.fullName === c.name)).map(c => c.id)}
+            onChange={handleQuickAddCrew}
+            searchable={true}
+            groupBy={true}
+            showSelectAll={true}
+            maxHeight={200}
+          />
+          <p className="text-xs text-green-600 mt-1">Select multiple crew members to add them all at once</p>
+        </div>
+
         {data.labour.map((row, index) => (
           <div
             key={index}

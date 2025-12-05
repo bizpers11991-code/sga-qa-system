@@ -46,13 +46,17 @@ class ResourcesApiService {
 
   /**
    * Filters equipment by division
+   * Includes Transport and Common equipment for all divisions
    */
   filterEquipmentByDivision(
     equipment: EquipmentResource[],
     division: 'Asphalt' | 'Profiling' | 'Spray'
   ): EquipmentResource[] {
     return equipment.filter(
-      (item) => item.division === division || item.division === 'Common'
+      (item) =>
+        item.division === division ||
+        item.division === 'Transport' ||  // Trucks available to all
+        item.division === 'Common'        // Support equipment available to all
     );
   }
 

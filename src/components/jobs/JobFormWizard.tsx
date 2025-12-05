@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CreateJobRequest } from '../../services/jobsApi';
 import { SecureForeman, CrewResource, EquipmentResource, ItpChecklistData, JobEquipment, JobTruck, JobMaterialRow } from '../../types';
 import { resourcesApi } from '../../services/resourcesApi';
 import { itpApi } from '../../services/itpApi';
+import { MultiSelect, MultiSelectOption } from '../ui/MultiSelect';
 
 interface JobFormWizardProps {
   onSubmit: (data: CreateJobRequest) => Promise<void>;
@@ -139,6 +140,79 @@ const JobFormWizard: React.FC<JobFormWizardProps> = ({
   const filteredEquipment = formData.division
     ? resourcesApi.filterEquipmentByDivision(equipment, formData.division)
     : equipment;
+
+  // Convert crew to MultiSelect options
+  const crewOptions: MultiSelectOption[] = useMemo(() =>
+    filteredCrew.map(member => ({
+      id: member.id,
+      label: member.name,
+      sublabel: member.isForeman ? 'Foreman' : 'Crew Member',
+      group: member.division,
+    })), [filteredCrew]);
+
+  // Convert equipment to MultiSelect options with grouping by type
+  const equipmentOptions: MultiSelectOption[] = useMemo(() =>
+    filteredEquipment.map(eq => ({
+      id: eq.id,
+      label: `${eq.id} - ${eq.name}`,
+      sublabel: eq.registrationNumber || eq.type,
+      group: eq.type,
+    })), [filteredEquipment]);
+
+  // Filter trucks from equipment
+  const truckOptions: MultiSelectOption[] = useMemo(() =>
+    equipment
+      .filter(eq => eq.type === 'Truck')
+      .map(eq => ({
+        id: eq.id,
+        label: `${eq.id} - ${eq.name}`,
+        sublabel: eq.registrationNumber || 'Truck',
+      })), [equipment]);
+
+  // Handler for equipment multi-select
+  const handleEquipmentSelect = (selectedIds: string[]) => {
+    const equipmentDetails = selectedIds.map(id => {
+      const eq = equipment.find(e => e.id === id);
+      return {
+        machine: eq ? `${eq.name} (${eq.id})` : id,
+        startTime: '',
+        supplier: 'SGA',
+        notes: '',
+      };
+    });
+    setFormData(prev => ({
+      ...prev,
+      profilingDetails: {
+        ...prev.profilingDetails,
+        equipment: equipmentDetails,
+        selectedEquipmentIds: selectedIds,
+      },
+    }));
+  };
+
+  // Handler for trucks multi-select
+  const handleTrucksSelect = (selectedIds: string[]) => {
+    const truckDetails = selectedIds.map(id => ({ truckId: id }));
+    setFormData(prev => ({
+      ...prev,
+      profilingDetails: {
+        ...prev.profilingDetails,
+        trucks: truckDetails,
+        selectedTruckIds: selectedIds,
+      },
+    }));
+  };
+
+  // Handler for crew multi-select
+  const handleCrewMultiSelect = (selectedIds: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      profilingDetails: {
+        ...prev.profilingDetails,
+        crew: selectedIds,
+      },
+    }));
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -682,20 +756,17 @@ const JobFormWizard: React.FC<JobFormWizardProps> = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Crew (Multi-select)</label>
-        <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-          {filteredCrew.map((member) => (
-            <label key={member.id} className="flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-50">
-              <input
-                type="checkbox"
-                checked={formData.profilingDetails?.crew?.includes(member.id) || false}
-                onChange={() => handleCrewSelect(member.id)}
-                className="rounded text-sga-700 focus:ring-sga-500"
-              />
-              <span className="text-sm text-gray-900">{member.name}</span>
-            </label>
-          ))}
-        </div>
+        <MultiSelect
+          label="Crew Members"
+          placeholder="Select crew members..."
+          options={crewOptions}
+          selected={formData.profilingDetails?.crew || []}
+          onChange={handleCrewMultiSelect}
+          searchable={true}
+          groupBy={true}
+          showSelectAll={true}
+          maxHeight={250}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -888,69 +959,55 @@ const JobFormWizard: React.FC<JobFormWizardProps> = ({
         Plant Requirements - Profilers & Equipment
       </h3>
 
-      <div className="space-y-3">
-        {(formData.profilingDetails?.equipment || []).map((equip, index) => (
-          <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Machine</label>
-              <select
-                value={equip.machine}
-                onChange={(e) => updateEquipment(index, 'machine', e.target.value)}
-                className="block w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-sga-500"
-              >
-                <option value="">Select...</option>
-                {filteredEquipment.map((eq) => (
-                  <option key={eq.id} value={`${eq.name} (${eq.id})`}>
-                    {eq.name} ({eq.id})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
-              <input
-                type="time"
-                value={equip.startTime}
-                onChange={(e) => updateEquipment(index, 'startTime', e.target.value)}
-                className="block w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-sga-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Supplier</label>
-              <input
-                type="text"
-                value={equip.supplier}
-                onChange={(e) => updateEquipment(index, 'supplier', e.target.value)}
-                className="block w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-sga-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-              <input
-                type="text"
-                value={equip.notes}
-                onChange={(e) => updateEquipment(index, 'notes', e.target.value)}
-                className="block w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-sga-500"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => removeEquipment(index)}
-                className="w-full px-3 py-1.5 text-sm text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
-              >
-                Remove
-              </button>
-            </div>
+      <div className="space-y-4">
+        <MultiSelect
+          label="Select Equipment"
+          placeholder="Search and select equipment..."
+          options={equipmentOptions}
+          selected={(formData.profilingDetails as any)?.selectedEquipmentIds || formData.profilingDetails?.equipment?.map(e => {
+            // Extract ID from existing equipment data
+            const match = e.machine?.match(/\((SGA\d+[A-Z]*-?[A-Z]*\d*)\)/);
+            return match ? match[1] : '';
+          }).filter(Boolean) || []}
+          onChange={handleEquipmentSelect}
+          searchable={true}
+          groupBy={true}
+          showSelectAll={false}
+          maxHeight={300}
+        />
+
+        {/* Show selected equipment details for editing times/notes */}
+        {(formData.profilingDetails?.equipment?.length || 0) > 0 && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Equipment Details (optional)</label>
+            {formData.profilingDetails?.equipment?.map((equip, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-2 bg-gray-50 rounded-lg text-sm">
+                <div className="font-medium text-gray-800 flex items-center">{equip.machine}</div>
+                <input
+                  type="time"
+                  value={equip.startTime}
+                  onChange={(e) => updateEquipment(index, 'startTime', e.target.value)}
+                  placeholder="Start Time"
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+                <input
+                  type="text"
+                  value={equip.supplier}
+                  onChange={(e) => updateEquipment(index, 'supplier', e.target.value)}
+                  placeholder="Supplier"
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+                <input
+                  type="text"
+                  value={equip.notes}
+                  onChange={(e) => updateEquipment(index, 'notes', e.target.value)}
+                  placeholder="Notes"
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+              </div>
+            ))}
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={addEquipment}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Add Equipment
-        </button>
+        )}
       </div>
 
       <h3 className="text-lg font-semibold text-sga-700 border-b border-gray-200 pb-2 mt-8">
@@ -958,36 +1015,19 @@ const JobFormWizard: React.FC<JobFormWizardProps> = ({
       </h3>
 
       <div className="space-y-3">
-        {(formData.profilingDetails?.trucks || []).map((truck, index) => (
-          <div key={index} className="flex gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Truck ID</label>
-              <input
-                type="text"
-                value={truck.truckId}
-                onChange={(e) => updateTruck(index, e.target.value)}
-                className="block w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-sga-500"
-                placeholder="e.g., TRUCK-001"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={() => removeTruck(index)}
-                className="px-3 py-1.5 text-sm text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={addTruck}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Add Truck
-        </button>
+        <MultiSelect
+          label="Select Trucks"
+          placeholder="Search and select trucks..."
+          options={truckOptions}
+          selected={(formData.profilingDetails as any)?.selectedTruckIds || formData.profilingDetails?.trucks?.map(t => t.truckId) || []}
+          onChange={handleTrucksSelect}
+          searchable={true}
+          showSelectAll={true}
+          maxHeight={250}
+        />
+        <p className="text-xs text-gray-500">
+          {formData.profilingDetails?.trucks?.length || 0} trucks selected
+        </p>
       </div>
     </div>
   );

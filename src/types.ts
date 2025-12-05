@@ -1,6 +1,14 @@
 
-
 // types.ts
+
+// ============================================================================
+// EXPORT CONSOLIDATED CORE TYPES
+// ============================================================================
+export * from './types/core.js';
+
+// ============================================================================
+// LEGACY TYPE ALIASES (for backward compatibility)
+// ============================================================================
 
 export type Role =
   | 'asphalt_foreman'
@@ -21,11 +29,6 @@ export const isAdminRole = (role: Role): boolean => {
   ].includes(role);
 };
 
-// FIX: Added ReportStatus type, as it was missing and causing an import error
-// in `api/update-report-status.ts`. This type defines the possible lifecycle
-// states for a submitted QA Pack.
-export type ReportStatus = 'Pending Review' | 'Requires Action' | 'Approved' | 'Archived';
-
 export interface Foreman {
   id: string; // auth0 id
   name: string;
@@ -34,28 +37,6 @@ export interface Foreman {
 }
 
 export interface SecureForeman extends Omit<Foreman, 'password'> {}
-
-export interface SitePhoto {
-    name: string;
-    data: string; // base64 data URL
-    description: string;
-}
-
-export interface DamagePhoto {
-    name: string;
-    data: string; // base64 data URL
-    description: string;
-}
-
-export interface IncidentPhoto {
-    name: string;
-    data: string; // base64 data URL
-}
-
-export interface JobSheetImage {
-    name: string;
-    data: string; // base64 data URL
-}
 
 export interface JobMaterial {
     mixCode: string;
@@ -272,7 +253,7 @@ export interface EquipmentResource {
     id: string; // Fleet ID
     name: string; // e.g., '2m Profiler'
     type: string; // e.g., 'Profiler'
-    division: 'Asphalt' | 'Profiling' | 'Spray' | 'Common';
+    division: 'Asphalt' | 'Profiling' | 'Spray' | 'Transport' | 'Common';
     registrationNumber?: string;
     status: 'Available' | 'In Use' | 'Maintenance';
 }

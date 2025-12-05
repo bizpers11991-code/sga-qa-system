@@ -1,31 +1,28 @@
 // api/get-resources.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ResourcesData } from './_lib/sharepointData.js';
+import { ResourcesData, ForemenData } from './_lib/sharepointData.js';
 import { CrewResource, EquipmentResource, Role } from '../src/types.js';
 import { withAuth, AuthenticatedRequest } from './_lib/auth.js';
 import { handleApiError } from './_lib/errors.js';
 
-// Mock data for initial population
-const initialCrew: CrewResource[] = [
-  { id: 'crew-1', name: 'John Blundell Snr', division: 'Profiling', isForeman: true },
-  { id: 'crew-2', name: 'John Blundell Jnr', division: 'Profiling', isForeman: true },
-  { id: 'crew-3', name: 'Scott Haney', division: 'Profiling', isForeman: false },
-  { id: 'crew-4', name: 'Jacob Gogoley', division: 'Profiling', isForeman: false },
-  { id: 'crew-5', name: 'Jahani Kepa', division: 'Profiling', isForeman: false },
-  { id: 'crew-6', name: 'Jack Blundell', division: 'Profiling', isForeman: false },
-  { id: 'crew-7', name: 'Jack Williams', division: 'Profiling', isForeman: false },
-  { id: 'crew-8', name: 'Geryd Adams', division: 'Profiling', isForeman: false },
-];
+/**
+ * Equipment types that belong to each division
+ * Based on the SGA Fleet Register upload
+ */
+const EQUIPMENT_TYPES = ['Paver', 'Roller', 'Truck', 'Profiler', 'Other Equipment'];
 
-const initialEquipment: EquipmentResource[] = [
-  { id: 'SGA87', name: '2m Profiler', type: 'Profiler', division: 'Profiling' },
-  { id: 'SGA100', name: '2m Profiler', type: 'Profiler', division: 'Profiling' },
-  { id: 'SGA55', name: 'Pocket Rocket', type: 'Profiler', division: 'Profiling' },
-  { id: 'SGA108', name: 'Pocket Rocket', type: 'Profiler', division: 'Profiling' },
-  { id: 'SGA88', name: 'Skid Steer', type: 'Skid Steer', division: 'Profiling' },
-  { id: 'SGA115', name: 'Skid Steer', type: 'Skid Steer', division: 'Profiling' },
-];
-
+// Division mapping for equipment types
+function getEquipmentDivision(resourceType: string, division: string): 'Asphalt' | 'Profiling' | 'Spray' | 'Transport' | 'Common' {
+    // If division is already set correctly, use it
+    if (division === 'Asphalt' || division === 'Profiling' || division === 'Spray' || division === 'Transport') {
+        return division;
+    }
+    // Map 'Shared' to 'Common' for backwards compatibility
+    if (division === 'Shared') {
+        return 'Common';
+    }
+    return 'Common';
+}
 
 async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -33,28 +30,36 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     }
 
     try {
-        // Get all resources from SharePoint
+        // Get all resources from SharePoint Resources list
         const allResources = await ResourcesData.getAll();
 
-        // Check if resources need initial population
-        if (allResources.length === 0) {
-            // Populate with initial data
-            const promises = [
-                ...initialCrew.map(c => ResourcesData.create({ ...c, resourceType: 'Crew' })),
-                ...initialEquipment.map(e => ResourcesData.create({ ...e, resourceType: 'Equipment' }))
-            ];
-            await Promise.all(promises);
+        // Get crew from Foremen list (people marked as crew/foremen)
+        const foremenList = await ForemenData.getAll();
 
-            // Fetch again after population
-            const resources = await ResourcesData.getAll();
-            const crew = resources.filter((r: any) => r.resourceType === 'Crew').sort((a: any, b: any) => a.name.localeCompare(b.name));
-            const equipment = resources.filter((r: any) => r.resourceType === 'Equipment').sort((a: any, b: any) => a.id.localeCompare(b.id));
-            return res.status(200).json({ crew, equipment });
-        }
+        // Convert foremen to CrewResource format
+        const crew: CrewResource[] = foremenList.map((f: any) => ({
+            id: f.id || f.title,
+            name: f.name || f.title,
+            division: f.division || 'Common',
+            isForeman: f.role?.toLowerCase().includes('foreman') || f.isForeman || false,
+            role: f.role,
+            phone: f.phone,
+            email: f.email,
+        })).sort((a: CrewResource, b: CrewResource) => a.name.localeCompare(b.name));
 
-        // Separate crew and equipment
-        const crew = allResources.filter((r: any) => r.resourceType === 'Crew').sort((a: any, b: any) => a.name.localeCompare(b.name));
-        const equipment = allResources.filter((r: any) => r.resourceType === 'Equipment').sort((a: any, b: any) => a.id.localeCompare(b.id));
+        // Convert SharePoint resources to EquipmentResource format
+        // SharePoint fields: Title, ResourceName, ResourceType, Division, Status, RegistrationNumber, Notes
+        const equipment: EquipmentResource[] = allResources
+            .filter((r: any) => EQUIPMENT_TYPES.includes(r.resourceType))
+            .map((r: any) => ({
+                id: r.title || r.id, // Title is the SGA asset number (SGA001, SGA002, etc.)
+                name: r.resourceName || r.title,
+                type: r.resourceType || 'Other Equipment',
+                division: getEquipmentDivision(r.resourceType, r.division),
+                registrationNumber: r.registrationNumber || undefined,
+                status: r.status || 'Available',
+            }))
+            .sort((a: EquipmentResource, b: EquipmentResource) => a.id.localeCompare(b.id));
 
         res.status(200).json({ crew, equipment });
     } catch (error: any) {
