@@ -19,6 +19,12 @@ process.env.R2_ENDPOINT = 'https://test-r2.com';
 process.env.R2_ACCESS_KEY_ID = 'test-access-key';
 process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key';
 
+// SharePoint environment variables for tests
+process.env.SHAREPOINT_SITE_URL = 'https://test.sharepoint.com/sites/testsite';
+process.env.AZURE_TENANT_ID = 'test-tenant-id-12345678-1234-1234-1234-123456789012';
+process.env.AZURE_CLIENT_ID = 'test-client-id-12345678-1234-1234-1234-123456789012';
+process.env.AZURE_CLIENT_SECRET = 'test-client-secret-value';
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

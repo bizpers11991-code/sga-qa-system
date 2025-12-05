@@ -1,0 +1,52 @@
+# Task: Context Manager
+
+## Description
+Manage conversation context
+
+## Output File
+api/chat/_lib/contextManager.ts
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create a context manager for maintaining conversation state.
+
+Class: ContextManager
+
+Methods:
+1. getContext(conversationId: string): Promise<ConversationContext>
+2. updateContext(conversationId: string, updates: Partial<ConversationContext>): Promise<void>
+3. addEntityReference(conversationId: string, entity: EntityReference): Promise<void>
+4. getRecentEntities(conversationId: string, limit?: number): EntityReference[]
+5. buildPromptContext(conversationId: string): string
+
+Features:
+- Track current page/view
+- Remember recently mentioned entities (jobs, projects, etc.)
+- Track user preferences
+- Maintain short-term memory (last 10 messages)
+- Build context string for AI prompts
+
+Storage:
+- Use in-memory cache for current session
+- Optionally persist to SharePoint Drafts list
+
+Context building for AI:
+- Include user role
+- Include recent entities
+- Include current page
+- Include relevant previous messages
+
+This helps the AI understand references like "that job" or "the incident we discussed".
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

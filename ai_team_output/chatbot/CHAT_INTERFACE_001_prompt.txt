@@ -1,0 +1,49 @@
+# Task: ChatInterface Component
+
+## Description
+Main chat UI container
+
+## Output File
+src/components/chat/ChatInterface.tsx
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create the main ChatInterface component that combines all chat components.
+
+Props:
+- className?: string
+- initialContext?: ConversationContext
+- onClose?: () => void (for modal/sidebar use)
+- variant?: 'full' | 'sidebar' | 'modal'
+
+Features:
+- Message list with auto-scroll
+- Input area at bottom
+- Suggested prompts (collapsible)
+- Loading indicator when waiting for response
+- Error display with retry button
+- Empty state for new conversations
+- Header with title and close button (for sidebar/modal)
+- Responsive: full width on mobile, fixed width on desktop
+
+Layout:
+- Header (optional): Title, close button
+- Messages area: Scrollable, flex-grow
+- Suggested prompts: Above input
+- Input area: Fixed at bottom
+
+Use the useChat hook for state management.
+Make it work in all three variants.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

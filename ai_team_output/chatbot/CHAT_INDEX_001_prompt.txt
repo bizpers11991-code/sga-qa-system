@@ -1,0 +1,34 @@
+# Task: Chat Components Index
+
+## Description
+Export all chat components
+
+## Output File
+src/components/chat/index.ts
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create an index file that exports all chat components.
+
+Exports:
+- ChatInterface
+- ChatMessage
+- ChatInput
+- SuggestedPrompts
+
+Also export any shared types/utilities used by components.
+
+Simple barrel export file.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

@@ -318,7 +318,7 @@ const SGA_LISTS: ListDefinition[] = [
     columns: [
       { name: 'ResourceName', displayName: 'Resource Name', type: 'Text', required: true },
       { name: 'ResourceType', displayName: 'Resource Type', type: 'Choice', required: true, choices: ['Crew', 'Paver', 'Roller', 'Truck', 'Profiler', 'Spray Unit', 'Other Equipment'] },
-      { name: 'Division', displayName: 'Division', type: 'Choice', choices: ['Asphalt', 'Profiling', 'Spray', 'Shared'] },
+      { name: 'Division', displayName: 'Division', type: 'Choice', choices: ['Asphalt', 'Profiling', 'Spray', 'Transport', 'Common'] },
       { name: 'Status', displayName: 'Status', type: 'Choice', required: true, choices: ['Available', 'In Use', 'Maintenance', 'Out of Service'] },
       { name: 'AssignedJobId', displayName: 'Assigned Job ID', type: 'Text' },
       { name: 'RegistrationNumber', displayName: 'Registration/ID', type: 'Text' },

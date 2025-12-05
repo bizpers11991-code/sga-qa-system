@@ -1,0 +1,53 @@
+# Task: Chat History Endpoint
+
+## Description
+API endpoint for conversation history
+
+## Output File
+api/chat/history.ts
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create the chat history API endpoint.
+
+Endpoints:
+GET /api/chat/history - List conversations
+GET /api/chat/history?id=xxx - Get specific conversation
+DELETE /api/chat/history?id=xxx - Delete conversation
+
+List response:
+{
+  conversations: [
+    { id, title, lastMessage, updatedAt }
+  ]
+}
+
+Detail response:
+{
+  conversation: ChatConversation
+}
+
+Implementation:
+1. Verify authentication
+2. Get user ID from token
+3. Query conversations (filtered by user)
+4. Return formatted response
+
+Pagination for list:
+- limit: number (default 20)
+- offset: number (default 0)
+
+Sort by updatedAt descending (newest first).
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

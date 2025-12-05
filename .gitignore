@@ -64,3 +64,4 @@ coverage/
 
 # Archive (don't commit old files)
 archive/
+.claude/settings.local.json

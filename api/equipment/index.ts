@@ -69,12 +69,16 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
   }
 }
 
+// Equipment types from the fleet register
+const EQUIPMENT_TYPES = ['Paver', 'Roller', 'Truck', 'Profiler', 'Other Equipment'];
+
 // GET - List equipment with optional filters
 async function handleGet(req: AuthenticatedRequest, res: VercelResponse) {
   const { division, status, type, search } = req.query;
 
   const allResources = await ResourcesData.getAll();
-  let equipment = allResources.filter((r: any) => r.resourceType === 'Equipment');
+  // Filter by equipment types (Paver, Roller, Truck, Profiler, Other Equipment)
+  let equipment = allResources.filter((r: any) => EQUIPMENT_TYPES.includes(r.resourceType));
 
   // Apply filters
   if (division && typeof division === 'string') {
@@ -89,14 +93,14 @@ async function handleGet(req: AuthenticatedRequest, res: VercelResponse) {
   if (search && typeof search === 'string') {
     const searchLower = search.toLowerCase();
     equipment = equipment.filter((e: any) =>
-      e.name?.toLowerCase().includes(searchLower) ||
-      e.fleetId?.toLowerCase().includes(searchLower) ||
+      e.resourceName?.toLowerCase().includes(searchLower) ||
+      e.title?.toLowerCase().includes(searchLower) ||
       e.registrationNumber?.toLowerCase().includes(searchLower)
     );
   }
 
-  // Sort by fleet ID
-  equipment.sort((a: any, b: any) => (a.fleetId || a.id).localeCompare(b.fleetId || b.id));
+  // Sort by fleet ID (Title field contains SGA001, SGA002, etc.)
+  equipment.sort((a: any, b: any) => (a.title || a.id).localeCompare(b.title || b.id));
 
   // Get unique types for filter dropdown
   const types = [...new Set(equipment.map((e: any) => e.type).filter(Boolean))];

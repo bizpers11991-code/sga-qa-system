@@ -1,0 +1,43 @@
+# Task: ChatInput Component
+
+## Description
+Chat input field with features
+
+## Output File
+src/components/chat/ChatInput.tsx
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create a ChatInput React component for message input.
+
+Props:
+- onSend: (message: string) => void
+- disabled?: boolean
+- placeholder?: string
+- suggestedPrompts?: string[]
+- onSelectPrompt?: (prompt: string) => void
+
+Features:
+- Auto-resizing textarea (1-5 rows)
+- Send button (enabled only when text exists)
+- Enter to send, Shift+Enter for newline
+- Character limit indicator (optional)
+- Suggested prompts chips above input
+- Clear button when text exists
+- Focus management
+
+Use Tailwind CSS. Make it mobile-friendly with proper touch targets.
+Include keyboard shortcut hints.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

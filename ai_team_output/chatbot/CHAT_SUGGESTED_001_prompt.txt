@@ -1,0 +1,45 @@
+# Task: SuggestedPrompts Component
+
+## Description
+Quick action prompts based on context
+
+## Output File
+src/components/chat/SuggestedPrompts.tsx
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create a SuggestedPrompts component showing contextual quick actions.
+
+Props:
+- context?: ConversationContext
+- onSelect: (prompt: string) => void
+- userRole?: string
+
+Features:
+- Display prompts as clickable chips/buttons
+- Context-aware: show relevant prompts based on current page
+- Role-aware: show different prompts for foremen vs engineers
+- Categories: Data, Help, Actions
+- Collapse/expand for more prompts
+- Loading state
+
+Default prompts by context:
+- Jobs page: "Show today's jobs", "Jobs with issues", "My assigned jobs"
+- QA Pack page: "Help me complete this QA pack", "What's missing?"
+- Dashboard: "Summary of this week", "Any overdue items?"
+- General: "How do I...?", "What's the procedure for...?"
+
+Use Tailwind CSS with horizontal scrolling on mobile.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

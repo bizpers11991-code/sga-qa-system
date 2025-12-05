@@ -1,0 +1,959 @@
+# Task: Draft Generator Service
+
+## Description
+Generate draft content for forms
+
+## Output File
+api/chat/_lib/draftGenerator.ts
+
+## Context Files
+=== api/_lib/aiService.ts ===
+/**
+ * Unified AI Service
+ * 
+ * Provides a unified interface for AI operations that automatically selects
+ * the best available AI provider:
+ * 
+ * Priority Order:
+ * 1. Azure OpenAI (Microsoft 365 Copilot) - Preferred for enterprise
+ * 2. Google Gemini - Fallback option
+ * 
+ * This allows seamless transition between providers without code changes.
+ */
+
+import { FinalQaPack } from '../../src/types.js';
+import * as azureOpenAI from './azureOpenAI.js';
+import { getExpertSystemInstruction } from './prompts.js';
+import { sanitizeForAIPrompt } from './sanitization.js';
+
+// Check which AI provider is available
+type AIProvider = 'azure-openai' | 'gemini' | 'none';
+
+function getAvailableProvider(): AIProvider {
+  // Prefer Azure OpenAI (Microsoft 365)
+  if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
+    return 'azure-openai';
+  }
+  
+  // Fallback to Gemini
+  if (process.env.GOOGLE_API_KEY || process.env.API_KEY) {
+    return 'gemini';
+  }
+  
+  return 'none';
+}
+
+/**
+ * Get AI provider status for health checks
+ */
+export function getAIStatus(): {
+  provider: AIProvider;
+  configured: boolean;
+  details: string;
+} {
+  const provider = getAvailableProvider();
+  
+  return {
+    provider,
+    configured: provider !== 'none',
+    details: provider === 'azure-openai' 
+      ? 'Microsoft Azure OpenAI (M365 Copilot)' 
+      : provider === 'gemini'
+        ? 'Google Gemini AI'
+        : 'No AI provider configured',
+  };
+}
+
+/**
+ * Generate QA Pack Report Summary
+ */
+export async function generateReportSummary(report: FinalQaPack): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateReportSummary(report);
+  }
+  
+  if (provider === 'gemini') {
+    // Dynamic import to avoid loading if not needed
+    const gemini = await import('./gemini.js');
+    return gemini.generateReportSummary(report);
+  }
+  
+  throw new Error('No AI provider configured. Set AZURE_OPENAI_* or GOOGLE_API_KEY environment variables.');
+}
+
+/**
+ * Generate Morning Lookahead Summary
+ */
+export async function generateMorningLookahead(
+  todaysJobs: any[],
+  date: string
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateMorningLookahead(todaysJobs, date);
+  }
+  
+  if (provider === 'gemini') {
+    // For Gemini, we need to construct the prompt differently
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const jobDetails = todaysJobs.map(job => 
+      `- **${job.jobNo} (${job.client})**: Division: ${job.division}, Location: ${job.location}`
+    ).join('\n');
+
+    const prompt = `
+      You are an operations manager preparing a morning briefing.
+      Based on the following list of jobs scheduled for today, ${date}, provide a concise and clear "Morning Lookahead" summary.
+      Group the jobs by division (Asphalt, Profiling, Spray) and briefly state the plan for the day.
+
+      **Today's Scheduled Jobs:**
+      ${jobDetails}
+    `;
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: getExpertSystemInstruction('summary'),
+      },
+    });
+    
+    return result.text ?? "Could not generate lookahead summary.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+/**
+ * Generate Evening Summary
+ */
+export async function generateEveningSummary(
+  reportDetails: string,
+  date: string
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateEveningSummary(reportDetails, date);
+  }
+  
+  if (provider === 'gemini') {
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const prompt = `
+      You are a senior QA engineer. Provide a detailed technical evening summary for your engineering team based on all completed QA packs for today, ${date}.
+      Focus on compliance, non-conformances, material usage, and any technical issues noted in the reports.
+      Your summary should be factual and highlight areas that may require follow-up.
+
+      **Submitted QA Packs for ${date}:**
+      ${reportDetails}
+    `;
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: getExpertSystemInstruction('summary'),
+      },
+    });
+    
+    return result.text ?? "Could not generate evening summary.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+/**
+ * Generic AI completion
+ */
+export async function generateCompletion(
+  prompt: string,
+  options?: {
+    systemPrompt?: string;
+    temperature?: number;
+    maxTokens?: number;
+  }
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateCompletion(prompt, options);
+  }
+  
+  if (provider === 'gemini') {
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: options?.systemPrompt || 'You are a helpful assistant for construction quality assurance.',
+      },
+    });
+    
+    return result.text ?? "Could not generate response.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+export default {
+  getAIStatus,
+  generateReportSummary,
+  generateMorningLookahead,
+  generateEveningSummary,
+  generateCompletion,
+};
+
+
+=== src/types.ts ===
+
+
+// types.ts
+
+export type Role =
+  | 'asphalt_foreman'
+  | 'profiling_foreman'
+  | 'spray_foreman'
+  | 'asphalt_engineer'
+  | 'profiling_engineer'
+  | 'spray_admin'
+  | 'scheduler_admin'
+  | 'tender_admin'
+  | 'management_admin'
+  | 'hseq_manager';
+
+export const isAdminRole = (role: Role): boolean => {
+  return [
+    'asphalt_engineer', 'profiling_engineer', 'scheduler_admin',
+    'management_admin', 'hseq_manager', 'spray_admin', 'tender_admin'
+  ].includes(role);
+};
+
+// FIX: Added ReportStatus type, as it was missing and causing an import error
+// in `api/update-report-status.ts`. This type defines the possible lifecycle
+// states for a submitted QA Pack.
+export type ReportStatus = 'Pending Review' | 'Requires Action' | 'Approved' | 'Archived';
+
+export interface Foreman {
+  id: string; // auth0 id
+  name: string;
+  username: string; // email
+  role: Role;
+}
+
+export interface SecureForeman extends Omit<Foreman, 'password'> {}
+
+export interface SitePhoto {
+    name: string;
+    data: string; // base64 data URL
+    description: string;
+}
+
+export interface DamagePhoto {
+    name: string;
+    data: string; // base64 data URL
+    description: string;
+}
+
+export interface IncidentPhoto {
+    name: string;
+    data: string; // base64 data URL
+}
+
+export interface JobSheetImage {
+    name: string;
+    data: string; // base64 data URL
+}
+
+export interface JobMaterial {
+    mixCode: string;
+    binder: string;
+    additive: string;
+    density: number;
+    aveDepth: number;
+    area: string;
+    tonnes: number;
+    layerNo: number;
+    pavementType: string;
+    lotNumber: string;
+}
+
+export interface PlantRequirement {
+    machine: string;
+    startTime: string;
+    supplier: string;
+    notes: string;
+}
+
+export interface DailyJobSheetData {
+    // Common
+    jobNo: string;
+    client: string;
+    date: string;
+    address: string;
+    projectName: string;
+    dayShift: boolean;
+    asphaltForeman: string;
+    jobMaterials?: JobMaterial[];
+    jobDetails?: string[];
+    equipment?: { item: string; vehicle: string; fleetNo: string; comments: string; }[];
+    mapLink?: string;
+    jobSheetImages?: JobSheetImage[];
+
+    // Asphalt specific
+    asphaltPlant?: string;
+    startTimeInYard?: string;
+    estimatedFinishTime?: string;
+    projectManager?: string;
+    projectSupervisor?: string;
+    asphaltSupervisor?: string;
+    clientSiteEngineerContact?: { name: string; phone: string; };
+    clientSiteSupervisorContact?: { name: string; phone: string; };
+    plantLaydownLocation?: string;
+    inspectedBy?: string;
+    compactionCheck?: string;
+    surfaceAndCondition?: string;
+    trafficControl?: string;
+    sweeping?: string;
+    inductions?: string;
+    cartage?: { semiTrucks: string; eightWheelTrucks: string; tanddTrucks: string; sixWheelTrucks: string; lilTipper: string; };
+    safety?: string;
+    qaPaperwork?: string;
+    testing?: string;
+
+    // Profiling specific
+    crewLeader?: string;
+    crew?: string;
+    depotStartTime?: string;
+    leaveDepotTime?: string;
+    onSiteBriefingTime?: string;
+    startCutTime?: string;
+    clientSiteContact?: string;
+    workArea?: string;
+    depth?: string;
+    tons?: string;
+    trucksDescription?: string;
+    descriptionOfWorks?: string;
+    rapDumpsite?: string;
+    profilers?: PlantRequirement[];
+    trucks?: PlantRequirement[];
+    machineDeliveryLocation?: string;
+    radioChannel?: string;
+    timeMachineToBeOnSiteBy?: string;
+    preDropOption?: string;
+    gateEntry?: string;
+    ifFloatRequiredToWait?: string;
+    endOfShiftChecks?: {
+        teethInspected: boolean;
+        machinesRefueledWaterFull: boolean;
+        machinesCleanedReloaded: boolean;
+        kerbsCheckedForDamage: boolean;
+        percentOfTeethWear: string;
+        detailsOfKerbDamage: string;
+    };
+    notes?: string;
+    
+    schemaVersion?: number;
+}
+
+export interface JobContacts {
+    projectManager?: string;
+    projectSupervisor?: string;
+    asphaltSupervisor?: string;
+    asphaltForeman?: string;
+    clientEngineer?: { name: string; phone: string };
+    clientSupervisor?: { name: string; phone: string };
+}
+
+export interface JobSiteDetails {
+    plantLaydownLocation?: string;
+    inspectedBy?: string;
+    compactionCheck?: string;
+    surfaceCondition?: string;
+    trafficControl?: string;
+    sweeping?: string;
+    inductions?: string;
+}
+
+export interface JobCartage {
+    semiTrucks?: number;
+    eightWheelTrucks?: number;
+    tanddTrucks?: number;
+    sixWheelTrucks?: number;
+    lilTipper?: number;
+}
+
+export interface JobEquipment {
+    machine: string;
+    startTime: string;
+    supplier: string;
+    notes: string;
+}
+
+export interface JobTruck {
+    truckId: string;
+}
+
+export interface JobMaterialRow {
+    mixCode: string;
+    pavementType: string;
+    tonnes: number;
+    area: number;
+    depth: number;
+    density: number;
+    lotNumber: string;
+}
+
+export interface ProfilingJobDetails {
+    dateRequired?: string;
+    crewLeader?: string;
+    crew?: string[];
+    depotStartTime?: string;
+    leaveDepotTime?: string;
+    onSiteBriefingTime?: string;
+    startCutTime?: string;
+    clientSiteContact?: string;
+    mapLink?: string;
+    workArea?: number;
+    workDepth?: number;
+    tons?: number;
+    trucksCount?: number;
+    descriptionOfWorks?: string;
+    rapDumpsite?: string;
+    equipment?: JobEquipment[];
+    trucks?: JobTruck[];
+}
+
+export interface AsphaltJobDetails {
+    asphaltPlant?: string;
+    startTimeYard?: string;
+    estimatedFinishTime?: string;
+    mapLink?: string;
+    dayShift?: boolean;
+    contacts?: JobContacts;
+    siteDetails?: JobSiteDetails;
+    cartage?: JobCartage;
+    materials?: JobMaterialRow[];
+}
+
+export interface Job {
+    id: string; // 'job-' + Date.now()
+    jobNo: string;
+    client: string;
+    division: 'Asphalt' | 'Profiling' | 'Spray';
+    projectName: string;
+    location: string;
+    foremanId: string;
+    jobDate: string; // YYYY-MM-DD
+    dueDate: string; // YYYY-MM-DD
+    area?: number;
+    thickness?: number;
+    jobSheetData?: DailyJobSheetData;
+    qaSpec?: string;
+    requiredQaForms?: (keyof Omit<QaPack, 'lastUpdated'>)[];
+    itpTemplateId?: string;
+    profilingDetails?: ProfilingJobDetails;
+    asphaltDetails?: AsphaltJobDetails;
+    clientTier?: 'Tier 1' | 'Tier 2' | 'Tier 3'; // For tier-based site visit automation
+    siteVisitEventIds?: string[]; // Teams calendar event IDs for site visits
+    jobCalendarEventId?: string; // Teams calendar event ID for the job
+    schemaVersion?: number;
+}
+
+// FORM DATA TYPES
+export interface SgaCorrectorRow {
+    quantity: string;
+    location: string;
+    mixType: string;
+}
+
+export interface CrewResource {
+    id: string;
+    name: string;
+    division: 'Asphalt' | 'Profiling' | 'Spray' | 'Common';
+    isForeman: boolean;
+}
+export interface EquipmentResource {
+    id: string; // Fleet ID
+    name: string; // e.g., '2m Profiler'
+    type: string; // e.g., 'Profiler'
+    division: 'Asphalt' | 'Profiling' | 'Spray' | 'Common';
+}
+
+export type ResourceType = 'Crew' | 'Equipment';
+
+export interface SgaDailyReportData {
+    project: string;
+    date: string;
+    completedBy: string;
+    startTime: string;
+    finishTime: string;
+    weatherConditions: AsphaltWeatherCondition[];
+    works: { mixType: string; spec: string; area: string; depth: string; tonnes: string; comments: string; }[];
+    actualWorks: { description: string; area: string; depth: string; tonnes: string; comments: string; }[];
+    correctorUsed: 'Yes' | 'No';
+    correctorDetails: SgaCorrectorRow[];
+    siteInstructions: string;
+    additionalComments: string;
+    // SGA Representative sign-off - Per SGA-QA-FRM-007
+    sgaSignName: string;
+    sgaSignature: string; // base64
+    // Client sign-off
+    clientSignName: string;
+    clientSignature: string; // base64
+    plantEquipment: { type: string; supplier: string; plantId: string; prestart: string; startTime: string; endTime: string; hours: string; comments: string; }[];
+    trucks: { truckId: string; contractor: string; startTime: string; endTime: string; hours: string; isSixWheeler: boolean; }[];
+    labour: { fullName: string; startTime: string; endTime: string; hours: string; comments: string; }[];
+    onSiteTests: { testType: string; location: string; result: string; passFail: 'Pass' | 'Fail' | ''; comments: string; }[];
+    otherComments: string;
+    teethUsage: string;
+}
+
+export interface HazardLogRow {
+    hazardDescription: string;
+    controlMeasures: string;
+}
+export interface SiteVisitorRow {
+    name: string;
+    company: string;
+    timeIn: string;
+    timeOut: string;
+}
+export interface SiteRecordData {
+    hazardLog: HazardLogRow[];
+    siteVisitors: SiteVisitorRow[];
+}
+
+export interface ItpChecklistItem {
+    id: string;
+    description: string;
+    compliant: 'Yes' | 'No' | 'N/A' | '';
+    comments: string;
+    isWitnessPoint: boolean;
+    witnessName: string;
+}
+export interface ItpChecklistSection {
+    title: string;
+    items: ItpChecklistItem[];
+}
+export interface ItpChecklistData {
+    id?: string;
+    name?: string;
+    documentId?: string;
+    sections: ItpChecklistSection[];
+}
+
+export interface AsphaltWeatherCondition {
+    time: string;
+    airTemp: string;
+    roadTemp: string;
+    windSpeed: string;
+    chillFactor: string;
+    dayNight: 'Day' | 'Night';
+}
+export interface AsphaltPlacementRow {
+    docketNumber: string;
+    tonnes: string;
+    progressiveTonnes: string;
+    time: string;
+    incomingTemp: string;
+    placementTemp: string;
+    tempsCompliant: 'Yes' | 'No' | '';
+    startChainage: string;
+    endChainage: string;
+    length: string;
+    runWidth: string;
+    area: string;
+    depth: string;
+    laneRun: string;
+    comments: string;
+    docketTemp: string;
+    dispatchTime: string;
+    detailsMatchSpec: 'Yes' | 'No' | '';
+    nonConformanceReason: string;
+    breakdownPasses: string;
+}
+export interface AsphaltPlacementData {
+    date: string;
+    lotNo: string;
+    sheetNo: string;
+    material: string;  // Added per SGA-QA-FRM-003 - Mix Type/Material
+    pavementSurfaceCondition: 'Dry' | 'Damp' | 'Wet' | '';
+    rainfallDuringShift: 'Yes' | 'No' | '';
+    rainfallActions: string;
+    rollingPatternId: string;
+    weatherConditions: AsphaltWeatherCondition[];
+    placements: AsphaltPlacementRow[];
+}
+
+export interface StraightEdgeRow {
+    runLane: string;
+    chainage: string;
+    transverse: string;
+    join: string;
+    longitudinal: string;
+}
+export interface StraightEdgeData {
+    lotNo: string;
+    date: string;           // Added per SGA-QA-FRM-005
+    location: string;       // Added per SGA-QA-FRM-005
+    mixType: string;
+    testedBy: string;
+    straightEdgeId: string;
+    tests: StraightEdgeRow[];
+    supervisor: string;
+    supervisorSignature: string;  // Added per SGA-QA-FRM-005
+}
+
+export interface SpraySealRun {
+    runNo: string;
+    startChainage: string;
+    endChainage: string;
+    length: string;
+    width: string;
+    area: string;
+    volumeSprayedLitres: string;
+    comments: string;
+}
+
+export interface SprayReportData {
+    lotNo: string;
+    date: string;
+    crewLeader: string;
+    operator: string;
+    weather: string;
+    windSpeed: string;
+    pavementTemp: string;
+    airTemp: string;
+    productType: string;
+    source: string;
+    sprayRateTarget: string;
+    sprayRateAchieved: string;
+    truckReadoutStart: string;
+    truckReadoutFinish: string;
+    runs: SpraySealRun[];
+}
+
+export interface PreStartChecklistItem {
+    id: string;
+    item: string;
+    status: 'Pass' | 'Fail' | 'N/A' | '';
+    comment: string;
+}
+
+export interface PreStartChecklistData {
+    vehicleId: string;
+    prestartCompletedBy: string;
+    items: PreStartChecklistItem[];
+}
+
+export interface TrafficManagementPlanItem {
+    id: string;
+    item: string;
+    compliant: 'Yes' | 'No' | 'N/A' | '';
+    comment: string;
+}
+
+export interface TrafficManagementPlanChecklistData {
+    tmpNumber: string;
+    checkedBy: string;
+    items: TrafficManagementPlanItem[];
+}
+
+
+// ITR - INSPECTION AND TEST REPORTS
+// Per SGA-QA-ITR-002 Asphalt Laying
+
+export interface ItrHoldPointSignOff {
+    sga: boolean;
+    dti?: boolean;
+    ghd?: boolean;
+    rtio?: boolean;
+    client?: boolean;
+}
+
+export interface ItrInspectionItem {
+    id: string;
+    itemNo: number;
+    description: string;
+    acceptanceCriteria: string;
+    status: 'Yes' | 'No' | 'N/A' | '';
+    holdPointSignOff: ItrHoldPointSignOff;
+    comments: string;
+}
+
+export interface ItrSignOff {
+    name: string;
+    position: string;
+    signature: string; // base64
+    date: string;
+}
+
+export interface ItrAsphaltLayingData {
+    // Project Details
+    projectName: string;
+    client: string;
+    description: string;
+    projectDocNo: string;
+    dateLaid: string;
+    lotNumber: string;
+    workArea: string;
+    chainage: string;
+    // Inspection Items (12 items per SGA-QA-ITR-002)
+    inspectionItems: ItrInspectionItem[];
+    // General Comments
+    comments: string;
+    // Sign Off
+    sgaRepresentative: ItrSignOff;
+    clientRepresentative: ItrSignOff;
+}
+
+// ITP - INSPECTION AND TEST PLANS
+// Per SGA-ITP-001, SGA-ITP-002, etc.
+
+export type TestPointType = 'V' | 'W' | 'H'; // Visual, Witness, Hold Point
+export type RoleKey = 'SS' | 'PE' | 'QA'; // Site Supervisor, Project Engineer, QA
+
+export interface ItpActivityItem {
+    id: string;
+    itemNo: number;
+    activity: string;
+    acceptanceCriteria: string;
+    verifyingDocument: string;
+    frequency: string;
+    testPoint: TestPointType;
+    roleKey: RoleKey;
+    recordOfConformity: string;
+    clientSignature: string; // base64
+    sgaSignature: string; // base64
+    comments: string;
+}
+
+export interface ItpFormData {
+    // Header
+    client: string;
+    project: string;
+    specifications: string;
+    lotNo: string;
+    lotDescription: string;
+    preparedBy: string;
+    approvedBy: string;
+    documentNumber: string;
+    revision: string;
+    date: string;
+    // Activity Items
+    activities: ItpActivityItem[];
+    // Final Inspection
+    finalInspectionComplete: boolean;
+    finalInspectionDate: string;
+    finalInspectorSignature: string; // base64
+    finalInspectorName: string;
+}
+
+// QA PACK
+export interface QaPack {
+    sgaDailyReport: SgaDailyReportData;
+    siteRecord: SiteRecordData;
+    itpChecklist: ItpChecklistData;
+    asphaltPlacement: AsphaltPlacementData;
+    straightEdge: StraightEdgeData;
+    sprayReport?: SprayReportData;
+    preStartChecklist?: PreStartChecklistData;
+    trafficManagementPlan?: TrafficManagementPlanChecklistData;
+    itrAsphaltLaying?: ItrAsphaltLayingData;  // Added ITR
+    itpForm?: ItpFormData;  // Added ITP
+    sitePhotos: SitePhoto[];
+    damagePhotos: DamagePhoto[];
+    lastUpdated: string;
+}
+
+export interface FinalQaPack extends QaPack {
+    job: Job;
+    jobSheet: DailyJobSheetData;
+    foremanPhoto?: string; // base64
+    foremanPhotoUrl?: string;
+    foremanSignature: string; // base64
+    timestamp: string; // ISO 8601
+    version: number;
+    submittedBy: string; // Foreman's name
+    pdfUrl?: string;
+    pdfData?: string; // temp base64
+    sitePhotoUrls?: string[];
+    damagePhotoUrls?: string[];
+    jobSheetImageUrls?: string[];
+    expertSummary?: string;
+    expertSummaryStatus?: 'pending' | 'completed' | 'failed';
+    schemaVersion?: number;
+    ncrs?: NonConformanceReport[];
+    // FIX: Added optional 'status' and 'internalNotes' properties. These were
+    // being accessed in `api/update-report-status.ts` but were not defined
+    // on the type, causing compilation errors.
+    status?: ReportStatus;
+    internalNotes?: string;
+}
+
+
+export interface IncidentReport {
+    id: string;
+    reportId: string; // e.g. INC-2024-001
+    reportedBy: string;
+    reporterId: string;
+    dateOfIncident: string;
+    timeOfIncident: string;
+    type: 'Incident' | 'Near Miss' | 'Hazard Identification' | '';
+    location: string;
+    jobNo?: string;
+    description: string;
+    immediateActionTaken: string;
+    involvedPersonnel?: string;
+    witnesses?: string;
+    photos: IncidentPhoto[];
+    photoUrls?: string[];
+    status: 'Open' | 'Under Investigation' | 'Closed';
+    investigationFindings?: string;
+    correctiveActions?: string;
+    hseqSignOff: {
+        isSigned: boolean;
+        signedBy?: string;
+        timestamp?: string;
+    };
+    adminSignOff: {
+        isSigned: boolean;
+        signedBy?: string;
+        timestamp?: string;
+    };
+    closedBy?: string;
+    closeOutDate?: string;
+}
+
+export interface AppNotification {
+    id: string;
+    title: string;
+    message: string;
+    type: 'info' | 'warning' | 'error';
+    timestamp: string;
+    isRead: boolean;
+    isResolved: boolean;
+    resolvedBy?: string;
+    resolvedAt?: string;
+    relatedUrl?: string;
+}
+
+export interface NonConformanceReport {
+    id: string;
+    ncrId: string; // e.g. NCR-2024-001
+    jobNo: string;
+    dateIssued: string;
+    issuedBy: string;
+    status: 'Open' | 'Under Review' | 'Closed';
+    descriptionOfNonConformance: string;
+    specificationClause?: string;
+    proposedCorrectiveAction?: string;
+    rootCauseAnalysis?: string;
+    preventativeAction?: string;
+}
+
+export interface SamplingPlan {
+    id: string;
+    jobNo: string;
+    lotNo: string;
+    specification: string;
+    startChainage: number;
+    endChainage: number;
+    numCores: number;
+    generatedBy: string;
+    timestamp: string;
+    results: {
+        chainage: number;
+        offset: 'LWP' | 'RWP' | 'Between WP';
+        notes: string;
+    }[];
+}
+
+export interface SpecificationDocument {
+    id: string;
+    title: string;
+    category: 'Specification' | 'Procedure' | 'Form' | 'Other';
+    fileKey: string; // Key in R2
+    fileUrl: string; // Public URL
+    fileType: string;
+    uploadedBy: string;
+    uploadedAt: string;
+}
+
+export interface WeatherData {
+    temperature: number;
+    weatherCode: number;
+    maxTemp: number;
+    minTemp: number;
+}
+
+// ============================================================================
+// PROJECT MANAGEMENT MODULE TYPES
+// ============================================================================
+
+/**
+ * Export all types from the Project Management module
+ * Includes: Tender Administration, Project Management, Scope Reports, Division Requests
+ */
+export * from './types/project-management';
+
+
+## Instructions
+Create a draft generator service for creating form drafts.
+
+Functions:
+1. generateJobDraft(params: JobDraftParams): Promise<Partial<Job>>
+2. generateIncidentDraft(params: IncidentDraftParams): Promise<Partial<Incident>>
+3. generateNCRDraft(params: NCRDraftParams): Promise<Partial<NCR>>
+4. generateQAPackNotes(context: QAPackContext): Promise<string>
+
+JobDraftParams:
+- description: string (natural language)
+- projectId?: string
+- division?: string
+
+IncidentDraftParams:
+- description: string
+- type?: string
+- severity?: string
+
+The generator should:
+1. Parse the natural language description
+2. Extract relevant fields
+3. Use AI to fill in reasonable defaults
+4. Return a partial object for user review
+
+Example:
+User: "Create a job for asphalt patching at Main Street, 50 tonnes, next Monday"
+Result: {
+  jobType: "Asphalt",
+  division: "Asphalt",
+  location: "Main Street",
+  workDescription: "Asphalt patching works",
+  estimatedTonnes: 50,
+  jobDate: "2025-12-08" // next Monday
+}
+
+Use Azure OpenAI via aiService for parsing.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

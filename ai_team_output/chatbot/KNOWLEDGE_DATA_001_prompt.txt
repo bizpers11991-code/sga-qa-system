@@ -1,0 +1,64 @@
+# Task: Knowledge Base Data
+
+## Description
+Static knowledge base content
+
+## Output File
+api/chat/_lib/knowledgeData.ts
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create static knowledge base data for the chat assistant.
+
+Export: KNOWLEDGE_BASE: KnowledgeEntry[]
+
+Categories to include:
+
+1. Asphalt Specifications (10+ entries)
+   - Temperature requirements
+   - Thickness requirements
+   - Mix types (AC10, AC14, AC20, etc.)
+   - Compaction requirements
+
+2. QA Procedures (10+ entries)
+   - ITP checklist items
+   - Testing requirements
+   - Documentation requirements
+
+3. Safety Procedures (10+ entries)
+   - PPE requirements
+   - Traffic management
+   - Hot works safety
+   - Environmental protection
+
+4. System Help (10+ entries)
+   - How to submit QA pack
+   - How to create a job
+   - How to report an incident
+   - How to use the scheduler
+
+Format each entry as:
+{
+  id: string,
+  category: string,
+  question: string,
+  answer: string,
+  keywords: string[],
+  source?: string
+}
+
+Make answers detailed and actionable.
+Include specific numbers and requirements where applicable.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

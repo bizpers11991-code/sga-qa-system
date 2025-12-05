@@ -1,0 +1,269 @@
+# Task: Knowledge Base Service
+
+## Description
+RAG system for document search
+
+## Output File
+api/chat/_lib/knowledgeBase.ts
+
+## Context Files
+=== api/_lib/aiService.ts ===
+/**
+ * Unified AI Service
+ * 
+ * Provides a unified interface for AI operations that automatically selects
+ * the best available AI provider:
+ * 
+ * Priority Order:
+ * 1. Azure OpenAI (Microsoft 365 Copilot) - Preferred for enterprise
+ * 2. Google Gemini - Fallback option
+ * 
+ * This allows seamless transition between providers without code changes.
+ */
+
+import { FinalQaPack } from '../../src/types.js';
+import * as azureOpenAI from './azureOpenAI.js';
+import { getExpertSystemInstruction } from './prompts.js';
+import { sanitizeForAIPrompt } from './sanitization.js';
+
+// Check which AI provider is available
+type AIProvider = 'azure-openai' | 'gemini' | 'none';
+
+function getAvailableProvider(): AIProvider {
+  // Prefer Azure OpenAI (Microsoft 365)
+  if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
+    return 'azure-openai';
+  }
+  
+  // Fallback to Gemini
+  if (process.env.GOOGLE_API_KEY || process.env.API_KEY) {
+    return 'gemini';
+  }
+  
+  return 'none';
+}
+
+/**
+ * Get AI provider status for health checks
+ */
+export function getAIStatus(): {
+  provider: AIProvider;
+  configured: boolean;
+  details: string;
+} {
+  const provider = getAvailableProvider();
+  
+  return {
+    provider,
+    configured: provider !== 'none',
+    details: provider === 'azure-openai' 
+      ? 'Microsoft Azure OpenAI (M365 Copilot)' 
+      : provider === 'gemini'
+        ? 'Google Gemini AI'
+        : 'No AI provider configured',
+  };
+}
+
+/**
+ * Generate QA Pack Report Summary
+ */
+export async function generateReportSummary(report: FinalQaPack): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateReportSummary(report);
+  }
+  
+  if (provider === 'gemini') {
+    // Dynamic import to avoid loading if not needed
+    const gemini = await import('./gemini.js');
+    return gemini.generateReportSummary(report);
+  }
+  
+  throw new Error('No AI provider configured. Set AZURE_OPENAI_* or GOOGLE_API_KEY environment variables.');
+}
+
+/**
+ * Generate Morning Lookahead Summary
+ */
+export async function generateMorningLookahead(
+  todaysJobs: any[],
+  date: string
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateMorningLookahead(todaysJobs, date);
+  }
+  
+  if (provider === 'gemini') {
+    // For Gemini, we need to construct the prompt differently
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const jobDetails = todaysJobs.map(job => 
+      `- **${job.jobNo} (${job.client})**: Division: ${job.division}, Location: ${job.location}`
+    ).join('\n');
+
+    const prompt = `
+      You are an operations manager preparing a morning briefing.
+      Based on the following list of jobs scheduled for today, ${date}, provide a concise and clear "Morning Lookahead" summary.
+      Group the jobs by division (Asphalt, Profiling, Spray) and briefly state the plan for the day.
+
+      **Today's Scheduled Jobs:**
+      ${jobDetails}
+    `;
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: getExpertSystemInstruction('summary'),
+      },
+    });
+    
+    return result.text ?? "Could not generate lookahead summary.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+/**
+ * Generate Evening Summary
+ */
+export async function generateEveningSummary(
+  reportDetails: string,
+  date: string
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateEveningSummary(reportDetails, date);
+  }
+  
+  if (provider === 'gemini') {
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const prompt = `
+      You are a senior QA engineer. Provide a detailed technical evening summary for your engineering team based on all completed QA packs for today, ${date}.
+      Focus on compliance, non-conformances, material usage, and any technical issues noted in the reports.
+      Your summary should be factual and highlight areas that may require follow-up.
+
+      **Submitted QA Packs for ${date}:**
+      ${reportDetails}
+    `;
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: getExpertSystemInstruction('summary'),
+      },
+    });
+    
+    return result.text ?? "Could not generate evening summary.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+/**
+ * Generic AI completion
+ */
+export async function generateCompletion(
+  prompt: string,
+  options?: {
+    systemPrompt?: string;
+    temperature?: number;
+    maxTokens?: number;
+  }
+): Promise<string> {
+  const provider = getAvailableProvider();
+  
+  if (provider === 'azure-openai') {
+    return azureOpenAI.generateCompletion(prompt, options);
+  }
+  
+  if (provider === 'gemini') {
+    const { GoogleGenAI } = await import('@google/genai');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const ai = new GoogleGenAI({ apiKey: apiKey! });
+    
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: options?.systemPrompt || 'You are a helpful assistant for construction quality assurance.',
+      },
+    });
+    
+    return result.text ?? "Could not generate response.";
+  }
+  
+  throw new Error('No AI provider configured.');
+}
+
+export default {
+  getAIStatus,
+  generateReportSummary,
+  generateMorningLookahead,
+  generateEveningSummary,
+  generateCompletion,
+};
+
+
+
+## Instructions
+Create a knowledge base service for document search (RAG).
+
+Functions:
+1. searchKnowledge(query: string): Promise<KnowledgeBaseResult[]>
+2. getDocumentContext(documentId: string): Promise<string>
+
+Knowledge categories:
+1. Construction Standards
+   - Asphalt specifications (temperature, thickness, etc.)
+   - Main Roads WA requirements
+   - Austroads guidelines
+
+2. Company Procedures
+   - QA procedures
+   - Safety procedures
+   - ITP requirements
+
+3. System Help
+   - How to use the app
+   - Feature explanations
+   - Troubleshooting
+
+Implementation approach:
+- For now, use a static knowledge base (JSON file with Q&A pairs)
+- Later can upgrade to vector embeddings with Azure OpenAI
+- Include source attribution in results
+- Return confidence scores
+
+Static knowledge format:
+{
+  "id": "spec_ac14_temp",
+  "category": "specifications",
+  "question": "What is the minimum placement temperature for AC14?",
+  "answer": "The minimum placement temperature for AC14...",
+  "keywords": ["ac14", "temperature", "placement"],
+  "source": "Main Roads WA Spec 501"
+}
+
+Search using keyword matching and TF-IDF for now.
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.

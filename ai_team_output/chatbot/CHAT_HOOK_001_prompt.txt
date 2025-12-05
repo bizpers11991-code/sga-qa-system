@@ -1,0 +1,43 @@
+# Task: useChat React Hook
+
+## Description
+React hook for managing chat state
+
+## Output File
+src/hooks/useChat.ts
+
+## Context Files
+No context files provided.
+
+## Instructions
+Create a React hook for managing chat functionality.
+
+The hook should provide:
+- messages: ChatMessage[] - current conversation messages
+- isLoading: boolean - loading state
+- error: string | null - error message
+- conversationId: string | null - current conversation ID
+- sendMessage: (content: string) => Promise<void>
+- clearConversation: () => void
+- loadConversation: (id: string) => Promise<void>
+- suggestedPrompts: string[]
+
+Features:
+- Auto-scroll to bottom on new messages
+- Optimistic UI updates
+- Error retry with exponential backoff
+- Persist conversation ID in session storage
+- Handle streaming responses (if supported)
+
+Use React hooks: useState, useEffect, useCallback, useRef
+
+## Requirements
+- Use TypeScript with strict mode
+- Follow existing code patterns
+- Include proper JSDoc comments
+- Handle errors gracefully
+- Use .js extension for imports in API files
+- Make it production-ready
+
+Generate ONLY the code for the file. No explanations before or after.
+Start with any necessary imports and end with exports.
