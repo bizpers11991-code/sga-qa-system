@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NotificationCenter } from '../notifications';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { Sun, Moon } from 'lucide-react';
 
 interface TopBarProps {
   userName?: string;
@@ -11,6 +13,7 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notificationCount = 0 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { isDark, toggleDarkMode } = useDarkMode();
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -74,6 +77,19 @@ const TopBar: React.FC<TopBarProps> = ({ userName, onMenuClick, onLogout, notifi
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 text-yellow-500" />
+          ) : (
+            <Moon className="w-5 h-5 text-gray-600" />
+          )}
+        </button>
+
         {/* Notification Center */}
         <NotificationCenter />
 
