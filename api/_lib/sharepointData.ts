@@ -48,7 +48,7 @@ const services = {
   qaPacks: createListService('QAPacks'),
   incidents: createListService('Incidents'),
   ncrs: createListService('NCRs'),
-  foremen: createListService('Foremen'),
+  crewMembers: createListService('CrewMembers'), // Unified crew list (replaces Foremen)
   resources: createListService('Resources'),
   itpTemplates: createListService('ITPTemplates'),
   samplingPlans: createListService('SamplingPlans'),
@@ -967,13 +967,105 @@ export const QAPacksData = {
 // Create data services for remaining entities
 export const IncidentsData = createDataService<IncidentReport>('Incidents');
 export const NCRsData = createDataService<NonConformanceReport>('NCRs');
-export const ForemenData = createDataService<Foreman>('Foremen');
 export const ResourcesData = createDataService('Resources');
 export const ITPTemplatesData = createDataService('ITPTemplates');
 export const SamplingPlansData = createDataService('SamplingPlans');
 export const DraftsData = createDataService('Drafts');
 export const NotificationsData = createDataService('Notifications');
 export const DailyReportsData = createDataService('DailyReports');
+
+// ============================================================================
+// FOREMEN DATA - Uses CrewMembers list with backward-compatible field mapping
+// ============================================================================
+export const ForemenData = {
+  async getAll(filter?: string): Promise<Foreman[]> {
+    const service = createListService('CrewMembers');
+    const items = await service.getItems<SharePointListItem & Record<string, any>>({
+      filter: filter || "IsActive eq true",
+      orderBy: 'FullName',
+    });
+
+    return items.map(item => ({
+      id: String(item.Id),
+      name: item.FullName || item.Title,
+      username: item.Email || '',
+      role: item.SystemRole || item.Role || '',
+      division: item.Division,
+      isForeman: item.IsForeman ?? false,
+      phone: item.Phone,
+      email: item.Email,
+    })) as Foreman[];
+  },
+
+  async getById(id: string): Promise<Foreman | null> {
+    try {
+      const service = createListService('CrewMembers');
+      const item = await service.getItem<SharePointListItem & Record<string, any>>(parseInt(id, 10));
+      return {
+        id: String(item.Id),
+        name: item.FullName || item.Title,
+        username: item.Email || '',
+        role: item.SystemRole || item.Role || '',
+        division: item.Division,
+        isForeman: item.IsForeman ?? false,
+        phone: item.Phone,
+        email: item.Email,
+      } as Foreman;
+    } catch {
+      return null;
+    }
+  },
+
+  async create(data: Omit<Foreman, 'id'>): Promise<Foreman> {
+    const service = createListService('CrewMembers');
+    const spData = {
+      Title: data.name,
+      EmployeeId: `EMP-${Date.now()}`,
+      FullName: data.name,
+      Email: data.username,
+      SystemRole: data.role,
+      Role: data.role?.includes('foreman') ? 'Foreman' : 'Operator',
+      Division: (data as any).division || 'Common',
+      IsForeman: data.role?.includes('foreman') || false,
+      IsActive: true,
+      Phone: (data as any).phone || '',
+    };
+
+    const created = await service.createItem<SharePointListItem>(spData);
+    return { ...data, id: String(created.Id) };
+  },
+
+  async update(id: string, updates: Partial<Foreman>): Promise<Foreman | null> {
+    const service = createListService('CrewMembers');
+    const spData: any = {};
+
+    if (updates.name) {
+      spData.FullName = updates.name;
+      spData.Title = updates.name;
+    }
+    if (updates.username) spData.Email = updates.username;
+    if (updates.role) {
+      spData.SystemRole = updates.role;
+      spData.IsForeman = updates.role.includes('foreman');
+    }
+    if ((updates as any).division) spData.Division = (updates as any).division;
+    if ((updates as any).phone) spData.Phone = (updates as any).phone;
+
+    await service.updateItem(parseInt(id, 10), spData);
+    return this.getById(id);
+  },
+
+  async delete(id: string): Promise<boolean> {
+    try {
+      // Soft delete - set IsActive to false
+      const service = createListService('CrewMembers');
+      await service.updateItem(parseInt(id, 10), { IsActive: false });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
 
 // Documents service (for specifications and other documents)
 interface SpecificationDocument {
