@@ -32,3 +32,9 @@ export {
 export { Progress, CircularProgress, progressVariants, type ProgressProps } from './progress'
 export { Spinner, LoadingOverlay, LoadingDots, ButtonSpinner } from './spinner'
 export { MultiSelect } from './MultiSelect'
+
+// Interactive components
+export { PullToRefresh } from './pull-to-refresh'
+export { PageTransition, StaggeredList, FadeInOnScroll } from './page-transition'
+export { CommandPalette, useCommandPalette } from './command-palette'
+export { Confetti, Celebration, useCelebration } from './confetti'
