@@ -2,6 +2,17 @@
 // types.ts
 
 // ============================================================================
+// IMPORT CORE TYPES FOR LOCAL USE
+// ============================================================================
+import type {
+  SitePhoto,
+  DamagePhoto,
+  IncidentPhoto,
+  JobSheetImage,
+  ReportStatus,
+} from './types/core.js';
+
+// ============================================================================
 // EXPORT CONSOLIDATED CORE TYPES
 // ============================================================================
 export * from './types/core.js';
